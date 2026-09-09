@@ -1,6 +1,6 @@
 # Surviving the Bottleneck: Do AI Models Trained on AI Output Converge to a Common Endpoint?
 
-**Sakxam Shrestha — AI110, Assignment 02: Project Proposal**
+**Sakxam Shrestha — CSCI, Assignment 02: Project Proposal**
 
 ## Introduction to the Research Topic
 

@@ -1,13 +1,13 @@
 # Research plan — Surviving the Bottleneck
 
-Semester plan for the remainder of the AI110 project, written 2026-09-04. Read alongside
+Semester plan for the remainder of the CSCI project, written 2026-09-04. Read alongside
 `PROJECT.md`, which is the record of what has been established; this document is the record
 of what is planned and why.
 
 ## 1. Where the project stands
 
 The pilot and the seed-stability experiment are complete and reproduced on this machine.
-The proposal (`ai110-proposal-FINAL.md`) is written. The declared open work is: a
+The proposal (`csci-proposal-FINAL.md`) is written. The declared open work is: a
 weight-space posterior-sampling arm, a ridge-regression null chain, longer runs, more
 founders, and the structured-seed arm.
 

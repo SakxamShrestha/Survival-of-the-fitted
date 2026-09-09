@@ -6,10 +6,10 @@ Guidance for Claude Code working in this repository.
 
 Two unrelated things share this directory, which is a known wart:
 
-1. **The live work** — an AI110 semester research project on iterated knowledge
+1. **The live work** — a CSCI semester research project on iterated knowledge
    distillation. See `PROJECT.md` for the full record. Files: `PROJECT.md`,
-   `ai110-proposal-draft.md`, `spike_iterated_distill.py`.
-2. **A separate AI110 assignment** — the "Playlist Chaos" Streamlit debugging exercise
+   `csci-proposal-draft.md`, `spike_iterated_distill.py`.
+2. **A separate CSCI assignment** — the "Playlist Chaos" Streamlit debugging exercise
    (`app.py`, `playlist_logic.py`, `README.md`, `requirements.txt`). These are the repo's
    git history and its remote. As of the last session they are **deleted from the working
    tree but still present at HEAD**; `git restore .` recovers them.

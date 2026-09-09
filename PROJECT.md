@@ -2,7 +2,7 @@
 
 Information loss and code contraction in iterated knowledge distillation.
 
-AI110 semester research project — Sakxam Shrestha.
+CSCI semester research project — Sakxam Shrestha.
 
 ## Research question
 
@@ -231,7 +231,7 @@ analytic null is lost.
 
 | file | what it is |
 |---|---|
-| `ai110-proposal-draft.md` | Assignment 02 proposal. Needs the four prior-art revisions listed above. |
+| `csci-proposal-draft.md` | Assignment 02 proposal. Needs the four prior-art revisions listed above. |
 | `spike_iterated_distill.py` | Runnable pilot. Reproduces every number in this document. |
 
 ```
