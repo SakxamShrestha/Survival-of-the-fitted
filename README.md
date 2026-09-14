@@ -1,222 +1,200 @@
 # Survival of the Fitted
 
-Information loss and code contraction in iterated knowledge distillation.
+**What happens when AI models are trained on other AI models' output, over and over for a long period of time?**
 
 CSCI semester research project — Sakxam Shrestha.
 
-## The question
+---
 
-Train a network. Throw away its training data, keep only its outputs on a handful of
-inputs, and train a fresh network on those. Repeat for suppose twenty-five generations. Nothing in
-the chain after generation 0 ever sees a real label it was trained on. 
+## The idea
 
-Two things can be measured at the end.
--  **What the chain computes** — does the last generation agree with the first about anything?
--  **what the chain still says** — which of the fifty output classes are still in use at all? This project measures both, and the
-gap between them.
+We all know the party game Telephone. Someone whispers a sentence, it goes around the circle,
+and what comes out the other end is mangled.
 
-The organising question is whether a distinction from Bayesian iterated-learning theory
-transfers to neural chains. Griffiths and Kalish (2007) prove that an iterated-learning
-chain converges to the learner's prior, but only for learners that *sample from the
-posterior*. A network trained by SGD to a single weight vector is a maximizer, not a
-sampler. Whether that distinction governs where a real distillation chain comes to rest is
-what the semester is for.
+Here is the part people get wrong about that game. If we keep on playing not one round, but
+hundreds, the message does not turn into random noise. It settles into something short and
+catchy and easy to remember. Every round, whatever was hard to hold onto falls away, and
+whatever is easy for human memory survives. After enough rounds the sentence has stopped
+telling you anything about what was originally whispered. It tells you about the players.
 
-Subsidiary: how do distillation temperature and transmission bottleneck width govern the
-rate and route of information loss, and does the bottleneck produce systematic *code
-contraction* rather than uniform degradation?
+This project plays Telephone with neural networks.
+
+I train a network on real labelled data. Then I throw the data away. A brand-new network is
+trained using only the first network's predictions on a limited handful of inputs — it never
+sees a real label, not once. Then a third network learns only from the second. And so on,
+for twenty-five generations.
+
+Then I will try measure two different things about the last network in the chain:
+
+- **What it computes** — does it still agree with the original network about anything?
+- **What it still says** — of the fifty possible output categories, how many does it even
+  use any more?
+
+Those two turn out to come apart in interesting ways, and the gap between them is what this
+project is about.
+
+## Why anyone should care
+
+The open internet is filling up with machine-generated text and images at a lot of faster pace than we can imagine. That means the next generation of models will be trained partly on the output of the current one, whether or not
+anybody plans it that way. Nobody is going to run twenty-five clean generations in the real
+world, but the direction of travel is real.
+
+What makes this scientifically interesting is that two established research literatures
+predict **opposite** outcomes for the same process:
+
+- **Model-collapse research** expects degradation. Rare cases vanish first, then variety
+  goes, and eventually the model is repeating itself.
+- **Iterated-learning research** in cognitive science expects the reverse. It holds that a
+  narrow bottleneck between generations *creates* structure, because only the simple,
+  learnable patterns are able to survive being passed down repeatedly.
+
+The goal is to find out which actually can happen in chains of neural networks, and — more
+usefully — what controls the answer.
+
+---
+
+## Where the project stands
+
+### The chain always loses information. Nothing self-organises.
+
+Agreement with the founding model decays toward chance in **every** condition tested. There
+is no setting where structure appears out of nowhere. The project originally asked whether
+structure might self-organise from a chain seeded on pure random noise; it does not, and
+that framing was dropped on this evidence.
+
+Twenty-five generations, fifty output classes, so chance agreement is exactly 0.020:
+
+| condition | agreement with generation 0 | classes still in use |
+|---|---|---|
+| tau = 0.5, B = 4096 | 0.219 | 50 |
+| tau = 1.0, B = 4096 | 0.164 | 50 |
+| tau = 2.0, B = 4096 | 0.132 | 48 |
+| tau = 1.0, B = 512 | 0.048 | 50 |
+| tau = 1.0, B = 128 | **0.024** | **6** |
+
+`tau` is the distillation temperature. `B` is the **bottleneck** — how many examples get
+passed to the next generation. Temperature changes how fast things decay. The bottleneck
+changes the outcome entirely.
+
+![Decay by temperature](figs/fig1_decay_by_temperature.png)
+
+### The standard similarity metric is blind to all of this
+
+This is the most useful thing the project has produced so far, and it was an accident.
+
+CKA (Centered Kernel Alignment) is a standard way of asking whether two networks have
+learned the same thing, and it was the main metric in my original proposal. Measured between
+consecutive generations it climbs to **0.959** — which reads as "these models are
+essentially identical" — at exactly the point where the models' actual predictions agree only
+**0.164** of the time.
+
+![CKA blindness](figs/fig2_cka_blindness.png)
+
+The two lines cross at generation three and head in opposite directions. Had I reported the
+metric I originally proposed, I would have concluded that nothing was happening. I now report
+three metrics together, and CKA only as a warning. (This blindness was already documented by
+Davari et al., ICLR 2023 — so this is a replication in a new setting, not a discovery.)
+
+### A tight bottleneck makes the model stop using most of its vocabulary
+
+At B = 128, the network goes from using forty-eight of its fifty output classes down to
+**six**. An earlier run stopped at twenty generations and found nineteen classes still alive;
+extending to twenty-five showed that the process had not finished. The earlier number was not
+a resting state.
+
+![Code contraction](figs/fig3_code_contraction.png)
+
+The right-hand panel is the surprise. **Effective rank** — a measure of how much of the
+representation space is actually being used — falls to a minimum at generation 10 and then
+climbs back up, while the output vocabulary is still collapsing. Two things that usually get
+lumped together as "collapse" are moving in opposite directions.
+
+### Where a chain ends up depends on where it started
+
+Running five chains from the **same** founding model, they land on overlapping sets of
+surviving classes at 2.94x the overlap you would expect by chance. Running five chains from
+**different** founding models, the overlap is 1.13x chance — indistinguishable from random.
+
+This **falsified** a hypothesis I had proposed myself: that the chain could be used as an
+instrument to read out an architecture's built-in bias. If that were true, different founders
+should have converged on the same classes. They do not. The falsification is kept in the
+record because it is the useful part.
+
+### The control that attacked my own result
+
+The concern with the vocabulary-collapse finding is that it might mean nothing — classes
+might just be dying off by frequency, telling us nothing about what the model learned.
+
+So: shuffle the teacher's outputs against the inputs before each generation trains. The same
+set of outputs gets handed over, just attached to the wrong inputs. If the collapse survives
+that, the finding is weak.
+
+It survived — and got dramatically **worse**. Shuffled chains collapse to a single surviving
+class.
+
+| arm | surviving classes (3 seeds) | mean |
+|---|---|---|
+| intact transmission | 9, 12, 13 | **11.3** |
+| shuffled transmission | 1, 2, 1 | **1.3** |
+
+![C-1 shuffled control](figs/fig5_c1_shuffled_control.png)
+
+So the original framing was too strong and has been corrected. But the control handed back a
+sharper question than the one it removed: keeping the input-to-output pairing intact
+**protects** the vocabulary, by roughly a factor of nine. Three seeds only, so this is
+preliminary.
+
+### A theory claim in my notes turned out to be backwards
+
+The theoretical finding that serves as the foundation for this research project is Griffiths and Kalish (2007). According to my earlier notes, it seems that neural networks which are trained using the technique of gradient descent do not tend to converge on their expected outcome, which I took to mean that I was correct in my assertion.
+The paper that I read, however, did not indicate this. In fact, their findings show that those neural networks which select the best answer are supposed to converge on this answer even more strongly than the neural networks which choose among options. A narrower bottleneck does mean more influence of the bias on the output of the neural networks and not vice versa.
+All this makes it necessary for me to think again about what I can claim. The theoretical framework does not include my findings concerning founder dependency and this makes them more interesting than if they had confirmed existing evidence.
+
+
+---
+
+## Running it
+
+```
+python3 spike_iterated_distill.py --gens 25 --tau 1.0 --bottleneck 4096 --log logs/run.jsonl
+python3 spike_iterated_distill.py --gens 25 --tau 1.0 --bottleneck 128  --log logs/tight.jsonl
+python3 controls/c1_shuffled.py
+python3 analysis/plot_chain.py
+```
+
+Requires PyTorch and NumPy. **No GPU needed** — a twenty-five-generation chain takes about
+thirty seconds on a laptop CPU, which is deliberate: the statistical power of this project
+comes from running many independent chains cheaply, not from one large run.
+
+Key flags: `--tau` (temperature), `--bottleneck` (examples passed between generations),
+`--mode` (`soft` / `sampled` / `argmax`), `--seed-kind` (`noise` / `structured`), `--gens`,
+`--seed`, `--log`.
+
+Every figure in this README regenerates from the logs in `logs/` via
+`analysis/plot_chain.py`. Nothing here is drawn by hand.
 
 ## What this is, and is not
 
 This is a **measurement testing a theoretical prediction**, not a discovery. An adversarial
 prior-art search returned no novelty on any headline claim, and that verdict was accepted
-rather than argued with. Claims here are scoped to what one architecture on one data
-distribution can support, and a clean negative result is treated as a valid outcome.
+rather than argued with. Claims are scoped to what one architecture on one data distribution
+can support, and a clean negative result is treated as a valid outcome.
 
-The project began as "does structure self-organise when a chain of models is seeded on pure
-random noise?" That framing was abandoned early. Theory already answers it — Mobahi,
-Farajtabar and Bartlett (2020) prove that repeated self-distillation without a ground-truth
-anchor collapses the solution's eigenspectrum — and the pilot confirmed it: agreement with
-the founding model decays monotonically toward chance in every condition tested. Nothing
-self-organises. The noise-seeded chain survives as one controlled arm rather than as the
-headline.
+Known limits, stated up front:
 
-## Running it
-
-```
-python3 spike_iterated_distill.py --gens 20 --tau 1.0 --bottleneck 4096
-python3 spike_iterated_distill.py --gens 20 --tau 1.0 --bottleneck 128
-python3 spike_iterated_distill.py --gens 20 --mode argmax
-python3 spike_iterated_distill.py --gens 20 --seed-kind structured
-```
-
-Roughly 40 seconds per 20-generation chain on a laptop CPU. Requires PyTorch and NumPy; no
-GPU needed. Key flags: `--tau` (distillation temperature), `--bottleneck` (samples passed
-between generations), `--mode` (`soft` / `sampled` / `argmax`), `--seed-kind` (`noise` /
-`structured`), `--gens`, `--seed`, `--log`.
-
-The central experiment is `seed_stability.py`, which runs the same-founder and
-cross-founder arms. It currently hardcodes its constants and prints to stdout; giving it a
-CLI and JSONL logging is the first task in the plan.
-
-### Device selection is measured, not assumed
-
-| model | CPU | MPS | use |
-|---|---|---|---|
-| synthetic MLP (92k params, 1500 steps) | **1.61 s** | 2.47 s | **CPU** |
-| EMNIST-shaped CNN (212k params, 1500 steps) | 48.2 s | **8.7 s** | **MPS** |
-
-The tiny MLP is slower on MPS because kernel-launch overhead dominates; the convolutional
-model is 5.5x faster there. One blanket rule does not fit both. `bench_cnn.py` reproduces
-the CNN measurement.
-
-## Design
-
-Inputs are synthetic compositional attribute-value vectors: five attributes of ten values
-each, one-hot concatenated to fifty dimensions, with a fixed pool of 4,096 points reused
-across all generations so cross-generation comparisons share a reference set. Fifty output
-classes.
-
-The founding generation is trained on i.i.d. random labels (the noise arm) or on a
-deterministic function of the attributes (the structured arm). Each subsequent generation
-is a freshly initialised 50–256–256–50 ReLU MLP of about 92k parameters. It never sees the
-original labels; it trains only on the previous generation's soft logits over `B` subsampled
-pool points, using a KL loss at temperature `tau`.
-
-A note on what the bottleneck does. The input matrix has rank 46, not 50 — the five
-attribute blocks each sum to one, which pins four directions to exactly zero. Every `B` in
-the swept grid exceeds 46, so a generic subsample already spans the whole input row space.
-**The bottleneck therefore removes no linear information about the input distribution.**
-What it restricts is how many (input, target) constraints are available to pin down a
-92k-parameter student. This corrects a natural misreading and is verified by
-`torch.linalg.matrix_rank` on the real pool.
-
-## Established so far
-
-Every number below was produced by the scripts in this repository, on the machine this work
-is being done on. Nothing is imported from a summary or a secondary source.
-
-### Pilot
-
-Seed 0 only, 20 generations, 50 classes. Chance agreement is 0.020; maximum entropy 3.912.
-
-| condition | agreement with gen 0 at g20 | effective rank at g20 | CKA vs previous gen | classes used |
-|---|---|---|---|---|
-| tau = 0.5, B = 4096 | 0.282 | 52.9 | 0.918 | 50 |
-| tau = 1.0, B = 4096 | 0.188 | 41.3 | 0.950 | 50 |
-| tau = 2.0, B = 4096 | 0.145 | 36.2 | 0.964 | 49 |
-| argmax transmission | 0.689 | 59.5 | 0.769 | 50 |
-| tau = 1.0, B = 128 | 0.025 | 27.3 | 0.918 | **19** |
-
-Effective rank at generation 1 is approximately 74 in all conditions.
-
-Three readings. Every condition loses ancestral information monotonically. Temperature
-orders the decay rate cleanly but does not create distinct phases — earlier drafts described
-"frozen" and "dissolved" regimes with a sharp boundary, which did not reproduce and has been
-removed. And the bottleneck is the stronger lever: at `B = 128` agreement reaches chance
-within a single generation while the used output alphabet contracts from fifty classes to
-nineteen.
-
-### Seed stability of code contraction
-
-`B = 128`, `tau = 1.0`, 25 generations, five runs per arm. Jaccard overlap of the surviving
-class sets, against the expected overlap for random subsets of the same size.
-
-| arm | setup | mean survivors | observed Jaccard | random baseline | ratio |
-|---|---|---|---|---|---|
-| **A** | one shared founder, 5 chains, soft logits | 7.4 of 50 | 0.235 | 0.080 | **2.94x** |
-| **B** | 5 different founders, soft logits | 4.4 of 50 | 0.052 | 0.046 | **1.13x** |
-| **C** | 5 different founders, *sampled* hard labels | 2.4 of 50 | 0.025 | 0.025 | **1.02x** |
-
-Arm A is systematic; Arms B and C are indistinguishable from chance. The stationary state is
-**founder-specific, not architecture-specific**: chains descending from the same generation-0
-model land on overlapping surviving classes at roughly three times chance, while chains from
-different founders land on unrelated classes.
-
-This falsifies the hypothesis that the chain could be used as an instrument to read out the
-architecture's inductive prior. That hypothesis was formulated and tested in the same
-session, and the falsification is recorded here because it is the useful part.
-
-Arm C tested the obvious repair and it failed. Replacing deterministic soft-logit
-transmission with hard labels *sampled* from the teacher's distribution did not raise
-cross-founder overlap; it made contraction more severe. The likely reason matters for the
-rest of the project: Griffiths and Kalish require sampling in *hypothesis* space, over the
-learner's beliefs. Sampling output labels leaves the learner doing SGD to a single point
-estimate on noisier targets. The remaining live test is sampling in weight space, which has
-not been tried here.
-
-Note also that the founder's identity persists in the *code* long after it is gone from the
-*function*. At `B = 128`, functional agreement with generation 0 reaches chance within one
-generation, yet the surviving alphabet still carries founder identity at generation 25.
-
-### On CKA
-
-**CKA is never reported alone in this project.** CKA between consecutive generations climbs
-to 0.950 while functional agreement with the founding model sits at 0.188, and CKA against
-generation 0 stays flat near 0.65 across the whole chain. It is blind to the degradation
-being studied. This is a replication, not a finding — Davari et al. (arXiv:2210.16156)
-documented it first, and Ding, Denain and Steinhardt (arXiv:2108.01661) frame the
-sensitivity criterion it fails. It is always paired with effective rank and functional
-agreement.
-
-## Not yet established
-
-The claim this project intends to defend is broader than what it can currently support. Of
-its seven clauses, two are established — path dependence, and the collapse of functional
-agreement within one generation. The rest are pending:
-
-- **The controls have not been run.** Eight are specified; zero are complete. Each has a
-  competing explanation attached with a citation, and the most dangerous is a shuffled-
-  transmission control that could reduce "code contraction" to "frequent classes win by
-  frequency."
-- **The analytic null does not exist yet.** A ridge-regression chain under the identical
-  protocol is a contraction map with an analytically tractable fixed point. Without it, the
-  project cannot distinguish its result from regression to the mean.
-- **"The code outlives the function" is inferred, not measured.** It rests on survivor-set
-  overlap. Permutation-invariant information measures — adjusted mutual information,
-  variation of information, adjusted Rand index against the fixed pool — would measure it
+- Twenty-five generations. Slower mixing could still reach a different endpoint.
+- The founder-dependence result rests on five runs per arm; the shuffling control on three.
+- Griffiths & Kalish analyse *finite* chains over a discrete set of hypotheses. This chain
+  runs over a continuous 92,000-parameter weight vector, so their argument does not transfer
   directly.
-- **Weight-space posterior sampling is untried.** This is the live hypothesis and the axis on
-  which no prior work was found.
-- Longer runs (the pilot is 20–25 generations), more founders (n = 5 gives ten
-  non-independent pairwise comparisons), and the structured-seed arm.
 
-Twenty-five generations is a horizon, not a proof of non-convergence. Survivor sets are
-small, between two and eleven classes, and no class survives in all five runs even in Arm A.
-The effect is a partial overlap, not a fixed attractor.
+## What is next
 
-## Repository
-
-| file | what it is |
-|---|---|
-| `PROJECT.md` | the record of what has been established, with prior-art position and full design |
-| `RESEARCH-PLAN.md` | the fourteen-week plan: controls, statistics, the mechanism arm, and the reading list |
-| `spike_iterated_distill.py` | runnable pilot; reproduces every number in the pilot table |
-| `seed_stability.py` | the central experiment — Arms A and B, and the source of the path-dependence result |
-| `sampler_arm.py` | Arm C, sampled hard-label transmission |
-| `bench_cnn.py` | CPU/MPS benchmark for the natural-data replication arm |
-| `csci-proposal-FINAL.md` | Assignment 02 proposal |
-| `CLAUDE.md` | working rules for this repository |
-
-## Working rules
-
-Two rules govern everything in this repository, and both exist because they were violated
-once.
-
-**Reproduce before you cite.** Every number in `PROJECT.md`, the proposal, or any report text
-must have been produced by a run on this machine. Numbers are not imported from a summary, a
-search result, or a prior conversation. A claim that a particular temperature was a "frozen
-fixed point" and that argmax transmission was an "absorbing state" was written into the
-proposal on that basis; neither reproduced, both decay, and the framing had to be removed.
-
-**Verify citations before adding them.** Check that the DOI or arXiv ID resolves and that the
-author list is right. A prior-art report used here cited a paper to the wrong authors while
-claiming direct retrieval. Unrefereed preprints are not cited as authority.
-
-## Status
-
-The pilot and the seed-stability experiment are complete and reproduced. The proposal is
-written. The plan in `RESEARCH-PLAN.md` runs the controls block first, then two cheap
-measurements that cannot come back uninterpretable, then the weight-space sampling arm
-behind a preregistered decision gate. Nothing above the controls line should be read as
-settled until they have run.
+1. Three more controls — including training networks directly from generation 0 with no
+   chaining at all, to confirm that repetition is doing something a single step does not.
+2. More seeds, so the headline comparisons carry error bars rather than a mean of three.
+3. A simple linear version of the same chain, whose answer can be worked out on paper. Without
+   it there is no way to tell a real effect from ordinary regression to the mean.
+4. The main experiment of the semester: changing how each network settles on its answer, from
+   picking one best solution to sampling among many. That is the one variable the theory says
+   should change where these chains end up.
