@@ -1,0 +1,21 @@
+
+seed 0: founder memorization accuracy 0.977
+  intact    ->  9 of 50 classes survive (trajectory 48 -> 42 -> 9)
+  shuffled  ->  1 of 50 classes survive (trajectory 50 -> 5 -> 1)
+
+seed 1: founder memorization accuracy 0.980
+  intact    -> 12 of 50 classes survive (trajectory 49 -> 44 -> 12)
+  shuffled  ->  2 of 50 classes survive (trajectory 50 -> 5 -> 2)
+
+seed 2: founder memorization accuracy 0.981
+  intact    -> 13 of 50 classes survive (trajectory 49 -> 43 -> 13)
+  shuffled  ->  1 of 50 classes survive (trajectory 49 -> 1 -> 1)
+
+=== C-1 VERDICT  (176s, 3 seeds, B=128, tau=1.0, 25 gens) ===
+intact transmission   : 11.3 classes  [9, 12, 13]
+shuffled transmission : 1.3 classes  [1, 2, 1]
+Contraction SURVIVES shuffling. The effect does not depend on the
+input-to-target mapping, so 'code contraction' must be stated as an
+alphabet-frequency effect rather than a mapping-preserving one.
+
+wrote logs/c1_shuffled.json

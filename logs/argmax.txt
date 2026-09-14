@@ -1,0 +1,8 @@
+gen 0 memorization accuracy on its own labels: 0.977  (3.4s)
+g  1  agree0=0.969  agreeprev=0.969  H=1.150  |z|= 40.90  classes= 50  effrank= 73.72  CKA0=0.649  CKAprev=0.649
+g  5  agree0=0.866  agreeprev=0.978  H=1.023  |z|= 42.99  classes= 50  effrank= 68.71  CKA0=0.634  CKAprev=0.692
+g 10  agree0=0.782  agreeprev=0.988  H=0.865  |z|= 48.10  classes= 50  effrank= 64.77  CKA0=0.625  CKAprev=0.728
+g 15  agree0=0.729  agreeprev=0.993  H=0.762  |z|= 48.48  classes= 50  effrank= 61.33  CKA0=0.622  CKAprev=0.745
+g 20  agree0=0.689  agreeprev=0.995  H=0.759  |z|= 49.35  classes= 50  effrank= 59.48  CKA0=0.627  CKAprev=0.769
+g 25  agree0=0.654  agreeprev=0.994  H=0.728  |z|= 51.91  classes= 50  effrank= 57.85  CKA0=0.626  CKAprev=0.781
+chance agreement = 0.020   max entropy = 3.912   total 43.2s
