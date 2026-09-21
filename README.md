@@ -111,14 +111,23 @@ lumped together as "collapse" are moving in opposite directions.
 
 ### Where a chain ends up depends on where it started
 
-Running five chains from the **same** founding model, they land on overlapping sets of
-surviving classes at 2.94x the overlap you would expect by chance. Running five chains from
-**different** founding models, the overlap is 1.13x chance — indistinguishable from random.
+Running twenty chains from the **same** founding model, they land on overlapping sets of
+surviving classes at 2.12x the overlap expected by chance, with a 95% confidence interval of
+[0.152, 0.236] against a chance level whose upper tail reaches only 0.102. Running twenty
+chains from **different** founding models, the overlap is 0.93x chance — the interval sits
+inside the chance band. A permutation test on the contrast between the two gives p < 0.0001.
+
+An earlier version of this section reported 2.94x and 1.13x from five chains per arm. Those
+came from ten pairwise comparisons with no interval, and the effect size was inflated. The
+larger sample corrects the magnitude downward while making the finding considerably harder to
+dismiss: the odds of seeing this contrast by luck fell from about 1 in 120 to under 1 in
+10,000. Recomputing over the first five runs of the new log reproduces the old numbers
+exactly, so nothing about the experiment changed — only how many times it was run.
 
 This **falsified** a hypothesis I had proposed myself: that the chain could be used as an
 instrument to read out an architecture's built-in bias. If that were true, different founders
-should have converged on the same classes. They do not. The falsification is kept in the
-record because it is the useful part.
+should have converged on the same classes. At four times the original sample, they still do
+not. The falsification is kept in the record because it is the useful part.
 
 ### The control that attacked my own result
 
