@@ -1,0 +1,31 @@
+C-2 preregistered gates, committed 2026-09-21:
+  sanity  chain-generation 1 lies inside the one-step reference's central 95%
+  A       some generation g <= 25 falls below the one-step reference's 2.5th percentile
+  B       some generation g <= 25 falls below the one-step reference's 2.5th percentile
+
+Gates are evaluated on the held-out probe pool. The preregistered C-2 entry does not specify a pool; C-6 established that training-pool metrics are misleading (argmax 0.969 train vs 0.217 probe at generation 1), so the probe pool was chosen after C-6 and before C-2 ran. Both pools are reported.
+
+founder (seed 0) memorization accuracy 0.977
+
+B=128: one-step reference over 50 students (probe pool)
+  agree_gen0     mean 0.055  central 95% [0.047, 0.064]
+  n_classes_used mean 49.6  2.5th pct 48.0
+  chain gen 1 agreement 0.055 -> sanity OK
+  gate A: agreement escapes at generation 4
+  gate B: alphabet escapes at generation 7
+  gen 25: agreement 0.035, alphabet 4.4
+
+B=4096: one-step reference over 50 students (probe pool)
+  agree_gen0     mean 0.230  central 95% [0.220, 0.243]
+  n_classes_used mean 50.0  2.5th pct 50.0
+  chain gen 1 agreement 0.226 -> sanity OK
+  gate A: agreement escapes at generation 4
+  gate B: alphabet escapes at generation 16
+  gen 25: agreement 0.129, alphabet 49.6
+
+=== C-2 VERDICT  (1101s) ===
+gate A (function) escaped; gate B (alphabet) escaped.
+The chain leaves the one-step reference, so iteration is doing something
+a single distillation step does not. The iterated framing is supported.
+
+wrote logs/c2_no_chaining.json
