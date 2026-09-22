@@ -46,6 +46,30 @@ def col(rows, key):
     return [r["gen"] for r in rows], [r[key] for r in rows]
 
 
+# ---------------------------------------------------------------- C-6 probe data
+#
+# `load` above reads the per-generation JSONL written by
+# `spike_iterated_distill.py --log`, whose metrics are computed on the pool the
+# chain trains on. C-6 (`controls/c6_probe_pool.py`) re-ran every condition
+# measuring on a held-out pool as well, and writes a single nested JSON instead,
+# so it gets its own reader rather than bending `load` to two shapes.
+#
+# Figures that plot agreement read the probe values. C-6 established that the
+# training-pool numbers overstate faithfulness — by 0.753 at generation 1 in the
+# argmax condition — so they are not what a claim should rest on.
+
+def load_c6():
+    with open(os.path.join(LOGS, "c6_probe_pool.json")) as handle:
+        data = json.load(handle)
+    return {r["condition"]: r for r in data["results"]}
+
+
+def c6_col(cond, pool, key):
+    """Generations and one metric for one condition, on the chosen pool."""
+    rows = cond["rows"]
+    return [r["gen"] for r in rows], [r[pool][key] for r in rows]
+
+
 def style(ax, xlabel, ylabel, title):
     ax.set_xlabel(xlabel, fontsize=10, color=MUTED)
     ax.set_ylabel(ylabel, fontsize=10, color=MUTED)
@@ -67,25 +91,67 @@ def save(fig, name):
     print(f"wrote {os.path.relpath(path, REPO)}")
 
 
-def fig_decay():
-    """Agreement with generation 0, swept over distillation temperature."""
-    fig, ax = plt.subplots(figsize=(7, 4.2))
+def fig_train_vs_probe():
+    """C-6: what the training pool hid.
+
+    Replaces the earlier temperature-sweep figure, which plotted training-pool
+    agreement and showed a clean monotone ordering in tau. That ordering does not
+    exist on held-out inputs. Dashed traces are the training pool, solid are the
+    probe pool; the gap between them is the measurement error, not a result.
+    """
+    c6 = load_c6()
+    fig, (a, b) = plt.subplots(1, 2, figsize=(10.5, 4.3))
+
+    # Left: the temperature ordering, and its disappearance.
     for tau in ("0.5", "1.0", "2.0"):
-        rows = load(f"tau{tau}_b4096.jsonl")
-        x, y = col(rows, "agree_gen0")
-        ax.plot(x, y, color=SEQ[tau], linewidth=2, marker="o", markersize=4,
-                label=f"tau = {tau}")
-        ax.annotate(f"{y[-1]:.3f}", (x[-1], y[-1]), textcoords="offset points",
-                    xytext=(7, 0), fontsize=9, color=SEQ[tau], va="center")
-    ax.axhline(CHANCE, color=MUTED, linewidth=1.2, linestyle=(0, (4, 3)))
-    ax.annotate(f"chance = {CHANCE:.3f}", (0.4, CHANCE), textcoords="offset points",
-                xytext=(0, 7), fontsize=9, color=MUTED)
-    style(ax, "generation", "functional agreement with generation 0",
-          "Ancestral information decays monotonically at every temperature")
-    ax.set_ylim(-0.03, 1.02)
-    ax.set_xlim(0.2, 27.5)
-    ax.legend(frameon=False, fontsize=9.5, labelcolor=INK)
-    save(fig, "fig1_decay_by_temperature.png")
+        cond = c6[f"tau{tau}_b4096"]
+        x, tr = c6_col(cond, "train", "agree_gen0")
+        _, pr = c6_col(cond, "probe", "agree_gen0")
+        a.plot(x, tr, color=SEQ[tau], linewidth=1.4, linestyle=(0, (4, 3)), alpha=.85)
+        a.plot(x, pr, color=SEQ[tau], linewidth=2.2, marker="o", markersize=3.5,
+               label=f"tau = {tau}")
+    a.axhline(CHANCE, color=MUTED, linewidth=1.2, linestyle=(0, (4, 3)))
+    a.annotate(f"chance = {CHANCE:.3f}", (0.4, CHANCE), textcoords="offset points",
+               xytext=(0, 7), fontsize=9, color=MUTED)
+    # The three probe traces land within 0.013 of each other, which is closer than
+    # chance agreement itself — so they are labelled as one cluster rather than
+    # three values that would simply overprint.
+    a.annotate("all three within 0.013,\ncloser than chance", (25, 0.137),
+               textcoords="offset points", xytext=(-96, 46), fontsize=9,
+               color=INK, ha="left",
+               arrowprops=dict(arrowstyle="->", color=INK, lw=1.1))
+    style(a, "generation", "functional agreement with generation 0",
+          "Temperature orders decay only on training data")
+    a.set_ylim(-0.03, 1.02)
+    a.legend(frameon=False, fontsize=9.5, labelcolor=INK)
+
+    # Right: argmax, where the gap is present before any chaining happens.
+    cond = c6["argmax"]
+    x, tr = c6_col(cond, "train", "agree_gen0")
+    _, pr = c6_col(cond, "probe", "agree_gen0")
+    b.fill_between(x, pr, tr, color=CAT[1], alpha=.13, linewidth=0)
+    b.plot(x, tr, color=CAT[1], linewidth=1.6, linestyle=(0, (4, 3)),
+           label="training pool")
+    b.plot(x, pr, color=CAT[1], linewidth=2.2, marker="o", markersize=3.5,
+           label="held-out probe pool")
+    for series, value in ((tr, tr[-1]), (pr, pr[-1])):
+        b.annotate(f"{value:.3f}", (x[-1], value), textcoords="offset points",
+                   xytext=(7, 0), fontsize=9.5, color=CAT[1], va="center",
+                   weight="bold")
+    b.axhline(CHANCE, color=MUTED, linewidth=1.2, linestyle=(0, (4, 3)))
+    b.annotate(f"gap {tr[0]-pr[0]:.3f}\nat generation 1", (1, (tr[0] + pr[0]) / 2),
+               textcoords="offset points", xytext=(22, -6), fontsize=9,
+               color=INK, ha="left",
+               arrowprops=dict(arrowstyle="->", color=INK, lw=1.1))
+    style(b, "generation", "functional agreement with generation 0",
+          "Argmax preserves the memorized table, not the function")
+    b.set_ylim(-0.03, 1.02)
+    b.legend(frameon=False, fontsize=9.5, labelcolor=INK, loc="center right")
+
+    for ax in (a, b):
+        ax.set_xlim(0.2, 27.5)
+    fig.tight_layout()
+    save(fig, "fig1_train_vs_probe.png")
 
 
 def fig_cka_blindness():
@@ -93,12 +159,15 @@ def fig_cka_blindness():
     measures on the same 0-1 scale, so they share one axis."""
     rows = load("tau1.0_b4096.jsonl")
     fig, ax = plt.subplots(figsize=(7, 4.2))
-    x, agree = col(rows, "agree_gen0")
-    _, cka = col(rows, "cka_prev")
+    # Agreement is read from the C-6 probe pool; CKA stays on the original log,
+    # which is the only place cka_prev is recorded. The contrast only sharpens:
+    # held-out agreement is 0.130 rather than the 0.164 measured on training data.
+    _, agree = c6_col(load_c6()["tau1.0_b4096"], "probe", "agree_gen0")
+    x, cka = col(rows, "cka_prev")
     ax.plot(x, cka, color=CAT[1], linewidth=2, marker="s", markersize=4,
             label="CKA vs previous generation")
     ax.plot(x, agree, color=CAT[0], linewidth=2, marker="o", markersize=4,
-            label="functional agreement with generation 0")
+            label="functional agreement with generation 0 (held-out)")
     ax.annotate(f"{cka[-1]:.3f}", (x[-1], cka[-1]), textcoords="offset points",
                 xytext=(7, 0), fontsize=9.5, color=CAT[1], va="center", weight="bold")
     ax.annotate(f"{agree[-1]:.3f}", (x[-1], agree[-1]), textcoords="offset points",
@@ -151,22 +220,28 @@ def fig_contraction():
 
 
 def fig_bottleneck():
-    """Agreement decay against bottleneck width at fixed temperature."""
+    """Agreement decay against bottleneck width, on held-out inputs.
+
+    Unlike the temperature ordering, this one survives C-6: the probe-pool
+    ordering 0.025 / 0.058 / 0.130 matches the training pool. Regenerated on
+    probe data for consistency with the other agreement figures, not because the
+    conclusion changed.
+    """
+    c6 = load_c6()
     fig, ax = plt.subplots(figsize=(7, 4.2))
-    series = (("tau1.0_b4096.jsonl", CAT[0], "B = 4096"),
-              ("tau1.0_b512.jsonl", CAT[2], "B = 512"),
-              ("tau1.0_b128.jsonl", CAT[1], "B = 128"))
+    series = (("tau1.0_b4096", CAT[0], "B = 4096"),
+              ("tau1.0_b512", CAT[2], "B = 512"),
+              ("tau1.0_b128", CAT[1], "B = 128"))
     for name, color, label in series:
-        rows = load(name)
-        x, y = col(rows, "agree_gen0")
+        x, y = c6_col(c6[name], "probe", "agree_gen0")
         ax.plot(x, y, color=color, linewidth=2, marker="o", markersize=4, label=label)
         ax.annotate(f"{y[-1]:.3f}", (x[-1], y[-1]), textcoords="offset points",
                     xytext=(7, 0), fontsize=9, color=color, va="center")
     ax.axhline(CHANCE, color=MUTED, linewidth=1.2, linestyle=(0, (4, 3)))
     ax.annotate(f"chance = {CHANCE:.3f}", (0.4, CHANCE), textcoords="offset points",
                 xytext=(0, 7), fontsize=9, color=MUTED)
-    style(ax, "generation", "functional agreement with generation 0",
-          "The bottleneck is a stronger lever than temperature")
+    style(ax, "generation", "functional agreement with generation 0 (held-out)",
+          "On held-out inputs the bottleneck is the only lever that moves the outcome")
     ax.set_ylim(-0.03, 1.02)
     ax.set_xlim(0.2, 27.5)
     ax.legend(frameon=False, fontsize=9.5, labelcolor=INK)
@@ -201,7 +276,7 @@ def fig_c1():
 
 
 if __name__ == "__main__":
-    fig_decay()
+    fig_train_vs_probe()
     fig_cka_blindness()
     fig_contraction()
     fig_bottleneck()
