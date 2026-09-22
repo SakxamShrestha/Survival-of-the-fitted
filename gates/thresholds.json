@@ -1,0 +1,91 @@
+{
+  "_README": [
+    "Preregistered decision thresholds. Required by RESEARCH-PLAN.md section 7:",
+    "'commit the following to a timestamped file ... writing it after seeing the result",
+    "is worthless.'",
+    "",
+    "Every entry here must be committed BEFORE the run it judges. The git history is the",
+    "evidence of that ordering, and it is the only real protection: the same author writes",
+    "both the experiment and its kill condition, so no file permission makes this honest.",
+    "What a commit buys is that moving a threshold becomes a visible diff instead of a",
+    "silent edit.",
+    "",
+    "Each threshold carries a derivation. A threshold without one is an arbitrary constant",
+    "wearing a harness, and an examiner's first question is 'who chose this number'."
+  ],
+
+  "C-6": {
+    "name": "Held-out probe pool",
+    "committed": "2026-09-21",
+    "question": "Are the published pilot metrics training metrics rather than generalization metrics?",
+    "background": [
+      "Every metric in the project is computed on the same 4,096-point pool the chain trains",
+      "on. At B = 4096 the students train on all of it, so the tau0.5/1.0/2.0_b4096 rows of",
+      "the pilot table are training metrics by construction. Three of those rows are cited",
+      "as evidence in the public README."
+    ],
+    "metric": "abs(agree_gen0 on probe pool - agree_gen0 on training pool) at generation 25",
+    "threshold": 0.05,
+    "fails_if": "metric exceeds threshold in any condition",
+    "derivation": [
+      "Published generation-25 agreements at B = 4096 are 0.219, 0.164 and 0.132 for",
+      "tau = 0.5, 1.0 and 2.0. Adjacent conditions are separated by 0.055 and 0.032.",
+      "A probe-versus-training gap of 0.05 is therefore the scale at which the temperature",
+      "ordering could reorder - that is, the scale at which a stated conclusion changes.",
+      "Anything smaller moves numbers without moving claims."
+    ],
+    "verdict_if_failed": [
+      "The published pilot table is a table of training metrics. Relabel it as such, and",
+      "rerun on the probe pool before any claim rests on those rows."
+    ],
+    "sanity_check": [
+      "At B = 128 the students train on 128 of 4,096 points, so training-pool and probe-pool",
+      "metrics should already agree closely. A large gap THERE means the probe pool is built",
+      "wrong, not that the finding is real."
+    ]
+  },
+
+  "C-2": {
+    "name": "No chaining",
+    "committed": "2026-09-21",
+    "question": "Does iteration do anything that a single distillation step does not?",
+    "background": [
+      "No control has ever compared a chain generation against a student distilled once",
+      "directly from generation 0. If chain-generation 5 looks like a fresh one-step",
+      "student, iteration is doing nothing and 'iterated distillation' is the wrong",
+      "description of the entire project."
+    ],
+    "reference_distribution": "one-step students distilled directly from generation 0 at the same bottleneck",
+    "gates": {
+      "sanity": {
+        "condition": "chain-generation 1 lies inside the one-step reference's central 95%",
+        "fails_if": "generation 1 falls outside",
+        "meaning_if_failed": "the control is misconfigured, not a finding - generation 1 IS a one-step student by construction"
+      },
+      "A": {
+        "metric": "agree_gen0",
+        "condition": "some generation g <= 25 falls below the one-step reference's 2.5th percentile",
+        "meaning_if_failed": "iteration changes nothing about the learned function"
+      },
+      "B": {
+        "metric": "n_classes_used",
+        "condition": "some generation g <= 25 falls below the one-step reference's 2.5th percentile",
+        "meaning_if_failed": "alphabet contraction is a one-step effect, not an iterated one"
+      }
+    },
+    "derivation": [
+      "The 2.5th percentile is the one-sided form of the two-sided 95% intervals already",
+      "used in analysis/seed_stability_stats.py. It is the repository's existing statistical",
+      "convention rather than a new number introduced for this control."
+    ],
+    "verdict_if_failed": [
+      "If gates A and B BOTH fail: hard stop. Iteration is doing nothing measurable, the",
+      "iterated framing is unsupported, and the semester's spine needs rethinking before any",
+      "further code is written.",
+      "",
+      "If gate B alone fails: the contraction headline has a one-step explanation, and",
+      "C-4's minority-collapse concern (Fang et al. 2021, PNAS) arrives early. At B = 128",
+      "a one-step student already sees only about 2.6 examples per class."
+    ]
+  }
+}
