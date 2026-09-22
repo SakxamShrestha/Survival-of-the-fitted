@@ -62,21 +62,40 @@ is no setting where structure appears out of nowhere. The project originally ask
 structure might self-organise from a chain seeded on pure random noise; it does not, and
 that framing was dropped on this evidence.
 
-Twenty-five generations, fifty output classes, so chance agreement is exactly 0.020:
+Twenty-five generations, fifty output classes, so chance agreement is exactly 0.020.
 
-| condition | agreement with generation 0 | classes still in use |
-|---|---|---|
-| tau = 0.5, B = 4096 | 0.219 | 50 |
-| tau = 1.0, B = 4096 | 0.164 | 50 |
-| tau = 2.0, B = 4096 | 0.132 | 48 |
-| tau = 1.0, B = 512 | 0.048 | 50 |
-| tau = 1.0, B = 128 | **0.024** | **6** |
+Two columns, because which one you read matters. Metrics in this project were originally
+computed on the same 4,096 inputs the chain trains on. A control (C-6) recomputed everything
+on a second pool of inputs no model ever trains on. The held-out column is the honest one.
+
+| condition | agreement (training inputs) | agreement (held-out) | classes in use |
+|---|---|---|---|
+| tau = 0.5, B = 4096 | 0.219 | 0.138 | 50 |
+| tau = 1.0, B = 4096 | 0.164 | 0.130 | 50 |
+| tau = 2.0, B = 4096 | 0.132 | 0.144 | 49 |
+| tau = 1.0, B = 512 | 0.048 | 0.058 | 49 |
+| tau = 1.0, B = 128 | **0.024** | **0.025** | **9** |
 
 `tau` is the distillation temperature. `B` is the **bottleneck** — how many examples get
-passed to the next generation. Temperature changes how fast things decay. The bottleneck
-changes the outcome entirely.
+passed to the next generation.
 
-![Decay by temperature](figs/fig1_decay_by_temperature.png)
+**The bottleneck changes the outcome entirely, and it holds up on held-out inputs:** 0.025 at
+B = 128 against 0.130 at B = 4096, the same ordering in both columns.
+
+**Temperature does not.** On training inputs the three temperatures look cleanly ordered,
+spread across 0.087. On held-out inputs they land within 0.013 of each other — closer
+together than chance agreement is to zero — and not even in the right order. An earlier
+version of this section said "temperature changes how fast things decay." That was an
+artifact of measuring on the training pool, and it is withdrawn.
+
+![Training versus held-out agreement](figs/fig1_train_vs_probe.png)
+
+The right-hand panel is the same mistake in its most extreme form. Passing hard `argmax`
+labels between generations appeared to preserve far more of the founding model — 0.654 after
+twenty-five generations, against roughly 0.13 for soft labels. On held-out inputs it is
+0.167, in the same band as everything else. The gap is 0.753 at generation **one**, before any
+chaining has happened. Argmax transmission preserves the founder's memorized answers on the
+exact points it memorized; it does not preserve the function.
 
 ### The standard similarity metric is blind to all of this
 
@@ -86,7 +105,7 @@ CKA (Centered Kernel Alignment) is a standard way of asking whether two networks
 learned the same thing, and it was the main metric in my original proposal. Measured between
 consecutive generations it climbs to **0.959** — which reads as "these models are
 essentially identical" — at exactly the point where the models' actual predictions agree only
-**0.164** of the time.
+**0.130** of the time on held-out inputs.
 
 ![CKA blindness](figs/fig2_cka_blindness.png)
 
@@ -98,9 +117,13 @@ Davari et al., ICLR 2023 — so this is a replication in a new setting, not a di
 ### A tight bottleneck makes the model stop using most of its vocabulary
 
 At B = 128, the network goes from using forty-eight of its fifty output classes down to
-**six**. An earlier run stopped at twenty generations and found nineteen classes still alive;
-extending to twenty-five showed that the process had not finished. The earlier number was not
-a resting state.
+**six** on the inputs it trains on, or **nine** measured on held-out inputs. An earlier run
+stopped at twenty generations and found nineteen classes still alive; extending to
+twenty-five showed that the process had not finished. The earlier number was not a resting
+state.
+
+Unlike the temperature result, this one survives being measured off the training pool. Six
+versus nine out of fifty is the same phenomenon — the vocabulary collapses either way.
 
 ![Code contraction](figs/fig3_code_contraction.png)
 
@@ -129,7 +152,51 @@ instrument to read out an architecture's built-in bias. If that were true, diffe
 should have converged on the same classes. At four times the original sample, they still do
 not. The falsification is kept in the record because it is the useful part.
 
-### The control that attacked my own result
+### The controls that attacked my own results
+
+I now write the pass/fail rule for each control into a file and commit it *before* running
+the control, so the threshold cannot be adjusted after seeing the answer. The rules live in
+`gates/thresholds.json`, and the git history is what makes them meaningful. Two controls have
+run so far. Both did damage.
+
+**C-6 — measure on inputs the model never trained on.** Every metric had been computed on the
+same 4,096 inputs the chain trains on. The rule, fixed in advance, was that a gap of more than
+0.05 between training and held-out agreement means the published table is a table of training
+metrics. Two conditions breached it, and the temperature and `argmax` results above are the
+casualties. Bottleneck dominance, vocabulary collapse and the CKA result all survived. A
+sanity check passed at the same time — at B = 128 the two pools agree to 0.002, which is what
+confirms the held-out pool is built correctly rather than simply being different.
+
+**C-1 — destroy the input-to-answer pairing.** Described below. It also failed, and also
+weakened a claim.
+
+**C-2 — check that repeating the process does anything at all.** This is the one control that
+could have ended the project, and nothing in the design had ever tested it. Every result
+compares generation *g* against generation 0, which measures how much was lost but says
+nothing about whether *repeating* matters. So: train fifty students distilled **once**,
+directly from the original model, and ask whether the chain ever leaves that crowd.
+
+It does, by generation four. And it returned something better than a pass:
+
+| | after one step | after twenty-five generations |
+|---|---|---|
+| agreement with the original | 0.055 | 0.035 |
+| **vocabulary still in use** | **49.6 of 50** | **4.4 of 50** |
+
+A single distillation step at the tight bottleneck keeps **essentially the whole
+vocabulary** — even though it only sees about 2.6 examples per class, which is the condition
+under which a known result (Fang et al., *PNAS* 2021) predicts classes should die off on
+their own. They don't. The vocabulary collapse needs the repetition.
+
+That splits the finding in two. **One step destroys the function; repetition destroys the
+vocabulary.** They come apart, and they degrade on different schedules — which is a sharper
+claim than the one I started with, and it closes off the most serious competing explanation
+for the project's best result.
+
+Two of these three controls damaged a claim, one strengthened it, and all three took minutes
+of compute. That is the argument for writing the rule down first.
+
+#### C-1 in detail
 
 The concern with the vocabulary-collapse finding is that it might mean nothing — classes
 might just be dying off by frequency, telling us nothing about what the model learned.
