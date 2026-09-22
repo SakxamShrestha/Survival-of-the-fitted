@@ -87,5 +87,60 @@
       "C-4's minority-collapse concern (Fang et al. 2021, PNAS) arrives early. At B = 128",
       "a one-step student already sees only about 2.6 examples per class."
     ]
+  },
+
+  "C-3": {
+    "name": "One-step fidelity baseline",
+    "committed": "2026-09-22",
+    "question": "Is the loss from a single distillation step an optimization artifact or an information limit?",
+    "background": [
+      "RESEARCH-PLAN.md section 4.1 specifies C-3 as agreement with generation 0 after a",
+      "SINGLE distillation step at B = 4096, and says: 'whatever that number is, it is the",
+      "floor against which all downstream decay must be read.'",
+      "",
+      "C-2 already measured the number: 0.230 on held-out inputs at B = 4096, over 50",
+      "one-step students at 1500 training steps. So the floor exists. What C-2 did not",
+      "test is whether that floor MOVES with the training budget.",
+      "",
+      "This matters because Stanton et al. attribute one-step teacher-student discrepancy",
+      "to optimization rather than information loss. If they are right here, the floor is a",
+      "property of how long we train, not of what the bottleneck destroys, and every decay",
+      "number in this project has been read against a budget-dependent baseline without",
+      "anyone saying so."
+    ],
+    "metric": "one-step agree_gen0 at B = 4096 on the held-out probe pool, as training steps increase from the standard 1500",
+    "reference_interval": [0.220, 0.243],
+    "reference_provenance": "logs/c2_no_chaining.json, 50 one-step students at 1500 steps, probe pool, 95% CI",
+    "threshold": 0.243,
+    "fails_if": "one-step agreement at 4x the training budget (6000 steps) exceeds 0.243, the upper bound of the 1500-step reference interval",
+    "derivation": [
+      "The threshold is the upper bound of the measured reference interval, not a chosen",
+      "number. Run-to-run spread across 50 one-step students at the standard budget is",
+      "0.022 wide. A budget increase that pushes the mean outside that interval has moved",
+      "the floor by more than the noise it was measured with; one that does not, has not.",
+      "",
+      "4x is the smallest multiplier that clearly separates a real trend from noise at this",
+      "interval width, and 6000 steps is about 11 s per student on this machine, so the",
+      "sweep is affordable at n = 20 per budget."
+    ],
+    "verdict_if_failed": [
+      "The one-step floor is optimization-dependent, not an information limit. Consequences:",
+      "every decay claim must be reported against a budget-matched floor rather than against",
+      "generation 0 alone; the 1500-step choice becomes a reported parameter rather than an",
+      "implementation detail; and the C-2 escape generations (4, 7, 16) need re-checking,",
+      "since they are defined relative to a reference distribution that itself moves.",
+      "",
+      "This does not invalidate C-2 — the chain still leaves the reference — but it changes",
+      "what the reference means."
+    ],
+    "verdict_if_passed": [
+      "The floor is an information limit at this budget. 0.230 stands as the number all",
+      "downstream decay is read against, and the 1500-step choice is not load-bearing."
+    ],
+    "sanity_check": [
+      "The 1500-step arm of this sweep must reproduce the C-2 reference mean of 0.230 within",
+      "its interval. If it does not, the sweep is not measuring the same thing C-2 measured",
+      "and nothing else in it can be read."
+    ]
   }
 }
