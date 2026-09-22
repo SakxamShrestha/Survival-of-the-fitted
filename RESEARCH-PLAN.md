@@ -178,6 +178,11 @@ report the prior scale as a swept variable rather than a fixed constant.
 
 These cost hours, not days, and each of them changes what the final report says.
 
+**All six applied as of 2026-09-22.** Items 2, 3, 4, 5 and 6 were cleared in one pass;
+item 1 was done on 2026-09-13. Two of them turned up more than expected: item 3's
+`rank(X) = 46` is now verified numerically rather than asserted, and item 6 confirmed the
+Davari abstract does *not* support the random-label claim that was attributed to it.
+
 1. Rewrite the maximizer sentence in `PROJECT.md` to match what Kirby, Dowman & Griffiths
    actually establish (§1.1). Read the paper first.
 2. Add Guo et al. (arXiv:2605.23054) to the prior-art section with an explicit statement of

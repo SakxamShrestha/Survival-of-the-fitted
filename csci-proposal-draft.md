@@ -53,9 +53,12 @@ iterated-learning theory govern the stationary state of neural distillation chai
 what point — if any — does making the learner a posterior sampler restore convergence to a
 shared endpoint?** I have already run and eliminated the obvious first answer. Replacing
 deterministic soft-logit transmission with hard labels *sampled* from the teacher's output
-distribution did not raise cross-founder overlap at all (1.02x baseline, versus 1.13x for
-deterministic transmission); it merely made the contraction more severe, cutting mean
-survivors from 4.4 classes to 2.4. The likely reason is a distinction the theory is
+distribution did not raise cross-founder overlap at all; it merely made the contraction
+more severe. At twenty runs per arm, cross-founder overlap under deterministic transmission
+is 0.93x chance and under sampled transmission 1.27x, and both confidence intervals sit
+inside the chance band; mean survivors fall from 5.4 classes to 1.6. (Earlier drafts quoted
+1.13x and 1.02x from five runs per arm. Those estimates rested on ten pairwise comparisons
+with no interval and are superseded.) The likely reason is a distinction the theory is
 specific about and I was not: Griffiths and Kalish require sampling in **hypothesis
 space**, over the learner's beliefs. Sampling output labels leaves the learner performing
 SGD to a single point estimate on noisier targets — it is still a maximizer. The live test
@@ -151,8 +154,12 @@ compared against the analytic random-subset baseline, and the sampler/maximizer 
 is supported only if a posterior-sampling learner exceeds baseline by a factor stated in
 advance while plain SGD does not. Concretely: (i) cross-founder overlap is reported per
 learner rule with confidence intervals over at least ten founders; (ii) the same-founder
-versus cross-founder contrast is reported, since the pilot's 2.94x versus 1.13x split is
-the effect the project is built on and it needs replication at larger n; (iii) the
+versus cross-founder contrast is reported, since the same-founder versus cross-founder
+split is the effect the project is built on. That replication is now done: at twenty runs
+per arm the split is 2.12x versus 0.93x chance, with the same-founder interval [0.152, 0.236]
+clear of a null whose upper tail reaches 0.102, and a permutation test giving p < 0.0001.
+The earlier 2.94x versus 1.13x figures came from five runs per arm and overstated the
+effect; (iii) the
 code-contraction curve — surviving alphabet size as a function of B — is characterized;
 (iv) the noise-seeded and structure-seeded conditions are compared with a stated effect
 size; and (v) the neural-versus-linear-null comparison is reported whichever way it comes

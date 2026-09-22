@@ -6,11 +6,28 @@ compositional labeling function (structured).
 Run this yourself before you build on the pilot numbers in the proposal.
 
     python3 spike_iterated_distill.py --gens 40 --tau 1.0 --bottleneck 4096
-    python3 spike_iterated_distill.py --gens 40 --tau 2.0        # dissolves fast
-    python3 spike_iterated_distill.py --gens 40 --tau 0.5        # frozen fixed point
-    python3 spike_iterated_distill.py --gens 40 --mode argmax    # absorbing state
+    python3 spike_iterated_distill.py --gens 40 --tau 2.0
+    python3 spike_iterated_distill.py --gens 40 --tau 0.5
+    python3 spike_iterated_distill.py --gens 40 --mode argmax
     python3 spike_iterated_distill.py --gens 40 --bottleneck 128 # tight bottleneck
     python3 spike_iterated_distill.py --gens 40 --seed-kind structured
+
+Two warnings about what these runs do and do not show.
+
+**Temperature does not order the decay.** Earlier versions of this docstring labelled
+`--tau 0.5` a "frozen fixed point" and `--tau 2.0` as dissolving fast. Neither reproduced.
+Control C-6 then showed the apparent ordering exists only on the pool the chain trains on:
+measured on held-out inputs the three temperatures land within 0.013 of each other, which
+is a smaller spread than chance agreement (0.020), and not in order.
+
+**`--mode argmax` is not an absorbing state, and its fidelity is mostly memorization.**
+It reaches 0.654 agreement with generation 0 at generation 25 on the training pool but
+0.167 on held-out inputs — a gap of 0.753 already at generation 1, before any chaining.
+It preserves the founder's memorized answers on the points it memorized, not its function.
+
+Metrics printed here are computed on the training pool, which at `--bottleneck 4096` means
+the students train on every point being measured. For held-out measurement use
+`controls/c6_probe_pool.py`.
 """
 
 import argparse

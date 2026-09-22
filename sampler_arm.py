@@ -1,4 +1,14 @@
-"""Arm C: different founders, SAMPLED hard-label transmission (sampler-like learner)."""
+"""Arm C: different founders, SAMPLED hard-label transmission.
+
+Not a sampler-like learner, despite what an earlier version of this docstring said.
+Sampling the transmitted *labels* randomizes the channel; the learner is still SGD
+descending to a single weight vector, so it remains a maximizer — now fitting noisier
+targets. Griffiths & Kalish require sampling in *hypothesis* space, over the learner's
+beliefs, which is a different intervention and is not implemented here.
+
+Reported in PROJECT.md as evidence that output-space sampling does not restore
+cross-founder convergence: overlap stays at chance while contraction gets more severe.
+"""
 import numpy as np, torch, torch.nn.functional as F
 from spike_iterated_distill import MLP, make_pool, train
 from seed_stability import jaccard, expected_jaccard, summarize
