@@ -226,6 +226,14 @@ teacher–student discrepancy after one step even with matched capacity and no b
 attributed to optimization rather than information loss. Whatever that number is, it is the
 floor against which all downstream decay must be read.
 
+**Run 2026-09-22; the gate failed** (`logs/c3_one_step.txt`, commit `dee46f2`). One-step
+agreement rises monotonically with the training budget: 0.142 at 375 steps, 0.230 at the
+standard 1500, 0.283 at 6000 against a preregistered ceiling of 0.243, and 0.306 at 12000.
+The floor is an optimization quantity, not an information limit, so Stanton et al. are
+right on this data. Downstream decay must be read against a budget-matched floor, the
+1500-step setting is now a reported parameter rather than an implementation detail, and the
+C-2 escape generations (4, 7, 16) require re-checking against a reference that moves.
+
 **C-4. Matched-imbalance control.** At B = 128 over 50 classes the transmitted set averages
 about 2.6 examples per class. Fang et al. (2021) characterize minority collapse
 analytically in exactly that regime. Either construct a matched-imbalance non-chained

@@ -156,8 +156,8 @@ not. The falsification is kept in the record because it is the useful part.
 
 I now write the pass/fail rule for each control into a file and commit it *before* running
 the control, so the threshold cannot be adjusted after seeing the answer. The rules live in
-`gates/thresholds.json`, and the git history is what makes them meaningful. Two controls have
-run so far. Both did damage.
+`gates/thresholds.json`, and the git history is what makes them meaningful. Four controls have
+run so far. Three did damage.
 
 **C-6 — measure on inputs the model never trained on.** Every metric had been computed on the
 same 4,096 inputs the chain trains on. The rule, fixed in advance, was that a gap of more than
@@ -193,7 +193,29 @@ vocabulary.** They come apart, and they degrade on different schedules — which
 claim than the one I started with, and it closes off the most serious competing explanation
 for the project's best result.
 
-Two of these three controls damaged a claim, one strengthened it, and all three took minutes
+**C-3 — check that the baseline is actually a baseline.** The number C-2 hands back, 0.230,
+is the agreement a single copy retains at the wide bottleneck, and every decay figure in this
+project is read against it. That only means something if the number is a property of the
+bottleneck rather than of how long the student is trained. The rule, fixed in advance, was
+that a fourfold increase in training budget must not push one-step agreement past 0.243, the
+upper bound of the interval C-2 measured.
+
+| training steps | 375 | 750 | 1,500 | 3,000 | 6,000 | 12,000 |
+|---|---|---|---|---|---|---|
+| agreement after one copy | 0.142 | 0.198 | 0.230 | 0.250 | 0.283 | 0.306 |
+
+It reached 0.283 at four times the budget and 0.306 at eight. **The floor is not a floor.**
+It moves with the training budget, which means it measures optimization rather than what the
+bottleneck destroys — the objection Stanton et al. (2021, arXiv:2106.05945) raise against this kind of
+measurement, confirmed here on my own data. The 1,500-step arm reproduced C-2's 0.230 exactly,
+so the sweep is measuring the same thing C-2 measured.
+
+This does not overturn C-2 — the chain still leaves the one-step crowd. It changes what
+leaving it means. Every decay number in this project now has to name the training budget its
+baseline was measured at, and C-2's escape generations need re-checking against a
+budget-matched reference.
+
+Three of these four controls damaged a claim, one strengthened it, and all four took minutes
 of compute. That is the argument for writing the rule down first.
 
 #### C-1 in detail
