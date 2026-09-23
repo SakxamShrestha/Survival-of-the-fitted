@@ -1,0 +1,33 @@
+C-3 preregistered rule, committed 2026-09-22:
+  metric     one-step agree_gen0 at B = 4096 on the held-out probe pool, as training steps increase from the standard 1500
+  reference  [0.220, 0.243]  (logs/c2_no_chaining.json, 50 one-step students at 1500 steps, probe pool, 95% CI)
+  fails if   one-step agreement at 4x the training budget (6000 steps) exceeds 0.243, the upper bound of the 1500-step reference interval
+
+The gate is evaluated on the held-out probe pool, which the preregistered C-3 metric names explicitly. Both pools are reported. Training-pool agreement at B = 4096 is a memorization metric by construction, since the student trains on every point being measured.
+The same 20 student seeds (1000-1019) are used at every budget, so the budgets are paired: initialization and data order are identical and only the step count differs. These are the first 20 of the 50 seeds c2_no_chaining.py used for its B = 4096 reference, so the 1500-step arm is an exact re-run of 20 of C-2's own students rather than an independent redraw.
+
+founder (seed 0) memorization accuracy 0.977  (2.6s)
+
+ steps   probe agree            95% CI   train agree  probe cls       loss
+--------------------------------------------------------------------------
+   375         0.142  [0.136, 0.148]         0.201       50.0     2.9321
+   750         0.198  [0.187, 0.214]         0.509       50.0     1.8524
+  1500         0.230  [0.223, 0.241]         0.963       50.0     0.3981
+  3000         0.250  [0.242, 0.262]         0.999       50.0     0.0747
+  6000         0.283  [0.275, 0.292]         0.995       50.0     0.0379
+ 12000         0.306  [0.297, 0.315]         0.995       50.0     0.0216
+
+=== C-3 VERDICT  (379s) ===
+sanity: 1500-step arm mean 0.230 vs C-2 reference interval [0.220, 0.243] -> OK
+main:   6000-step arm mean 0.283 vs threshold 0.243
+The one-step floor MOVED with the training budget.
+The one-step floor is optimization-dependent, not an information limit. Consequences:
+every decay claim must be reported against a budget-matched floor rather than against
+generation 0 alone; the 1500-step choice becomes a reported parameter rather than an
+implementation detail; and the C-2 escape generations (4, 7, 16) need re-checking,
+since they are defined relative to a reference distribution that itself moves.
+
+This does not invalidate C-2 — the chain still leaves the reference — but it changes
+what the reference means.
+
+wrote logs/c3_one_step.json
