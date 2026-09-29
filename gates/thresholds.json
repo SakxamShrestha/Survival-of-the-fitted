@@ -142,5 +142,81 @@
       "its interval. If it does not, the sweep is not measuring the same thing C-2 measured",
       "and nothing else in it can be read."
     ]
+  },
+  "C-4": {
+    "name": "Matched imbalance — does soft-logit transmission starve classes?",
+    "committed": "2026-09-29",
+    "question": "Is alphabet contraction explained by minority collapse under class imbalance in the transmitted set, rather than by anything iteration does?",
+    "background": [
+      "At B = 128 over 50 classes the transmitted set averages 2.56 examples per class.",
+      "Fang, He, Long and Su (PNAS 2021) characterize minority collapse analytically in",
+      "exactly that regime: as the ratio of majority to minority counts grows, the minority",
+      "classes' classifier vectors converge and those classes stop being predicted. That is",
+      "a competing explanation for this project's headline result, and it arrives with a",
+      "PNAS citation attached.",
+      "",
+      "Their theory is written in per-class example counts, which a hard-label channel has",
+      "and a soft-logit channel does not. The transmitted object here is a matrix of",
+      "probabilities, so the corresponding quantity is the effective count: the column sum",
+      "of the transmitted softmax over the B selected inputs.",
+      "",
+      "RESEARCH-PLAN section 4.1 allows C-4 to be answered either by constructing a",
+      "matched-imbalance control or by establishing that soft-logit transmission places mass",
+      "on all classes and therefore evades the mechanism. This entry judges the second route,",
+      "which costs five short chains rather than a new experimental arm. It can only close",
+      "the question or declare the first route mandatory; it cannot substitute for it."
+    ],
+    "metric": "effective per-class count m_k(g) = sum over the B transmitted inputs of the teacher's softmax probability for class k, at tau = 1.0 and B = 128",
+    "gates": {
+      "A": {
+        "metric": "number of classes with m_k(1) < 1.0",
+        "condition": "no class falls below one effective example at the first transmission",
+        "fails_if": "any class does",
+        "meaning_if_failed": "soft transmission starves classes from the founder onward, so Fang's regime is entered before any chaining and the evasion route is closed"
+      },
+      "B": {
+        "metric": "overlap coefficient between the classes starved at generation 1 and the classes absent from generation 25's predictions, pooled over five chains",
+        "condition": "the overlap does not exceed a permutation null that reassigns which classes are starved at matched set size",
+        "fails_if": "pooled permutation p < 0.05",
+        "meaning_if_failed": "which classes are starved predicts which classes die, so minority collapse is a live explanation for alphabet contraction and the constructed matched-imbalance control becomes mandatory"
+      }
+    },
+    "derivation": [
+      "The 1.0 cutoff in gate A is not chosen, it is the unit Fang et al.'s theory is written",
+      "in. Their counts are whole labelled examples and n_min = 1 is the smallest count above",
+      "collapse, so a class receiving less soft mass than one hard example is inside their",
+      "regime by their own units rather than by a constant of mine.",
+      "",
+      "The 0.05 in gate B is the repository's existing convention rather than a new number:",
+      "analysis/seed_stability_stats.py already tests survivor-set overlap against a",
+      "permutation null at that level, and gate B is the same statistic computed on a",
+      "different pair of sets. The overlap coefficient is used rather than Jaccard because",
+      "the two sets have systematically different sizes, which RESEARCH-PLAN section 4.3",
+      "records as a known defect of Jaccard in this project."
+    ],
+    "verdict_if_failed": [
+      "If gate A alone fails: the evasion route is closed but nothing is yet explained.",
+      "Starvation exists; gate B is what says whether it matters.",
+      "",
+      "If gate B fails: minority collapse is a live competing explanation for the project's",
+      "best result. The constructed matched-imbalance control becomes mandatory, and until it",
+      "runs the contraction claim must be stated with this explanation named and unexcluded.",
+      "",
+      "If both fail: report alphabet contraction as consistent with minority collapse, and",
+      "stop describing it as a property of iterated transmission until the constructed",
+      "control separates the two."
+    ],
+    "verdict_if_passed": [
+      "Soft-logit transmission feeds every class above the unit Fang et al.'s analysis is",
+      "written in, and starvation does not predict death. The minority-collapse explanation",
+      "is excluded for the soft arm without constructing a matched-imbalance control, and",
+      "C-4 is answered by the second route RESEARCH-PLAN section 4.1 allows."
+    ],
+    "sanity_check": [
+      "The same measurement under argmax transmission at B = 128 must show classes at an",
+      "effective count of exactly zero, since a hard channel either selects a class or does",
+      "not. If the argmax arm shows no starved classes, the measurement is wrong rather than",
+      "the soft result surprising."
+    ]
   }
 }
