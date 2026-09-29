@@ -1,0 +1,37 @@
+C-4T preregistered rule, committed 2026-09-29:
+  metric   death generation d_k of each class k: the first generation at which class k is absent from the student's predictions on the held-out probe pool and remains absent through generation 25. Classes still predicted at generation 25 are censored at d_k = 26.
+  gate A   the correlation is not significantly positive
+           fails if one-sided permutation p < 0.05 for a positive correlation, permuting class labels within each chain, 10000 permutations
+  gate B   starved classes do not die earlier than the rest
+           fails if one-sided permutation p < 0.05 for starved classes dying earlier, same permutation scheme
+
+Chains, founder, bottleneck and seeds (400-404) are identical to controls/c4_class_mass.py, which is not edited or re-imported for data. The only addition is recording, per generation, which classes the student predicts on the held-out probe pool - the set c4_class_mass.py never logged. Death generation is the first generation a class is absent from that set and remains absent through generation 25; still-predicted-at-25 classes are censored at 26. This control has no argmax arm: C-4's argmax chain was a sanity check on the effective-count metric, which is not recomputed here.
+
+Spearman backend: scipy.stats.spearmanr
+
+founder (seed 0) memorization accuracy 0.977  (4.9s)
+
+chain  starved g1  alive g25  mean death  censored
+--------------------------------------------------
+  400           4          5       17.56         5
+  401           7          3       16.88         3
+  402           5          7       18.76         7
+  403           7          2       17.64         2
+  404           3         13       18.28        13
+
+=== C-4T VERDICT  (187s) ===
+sanity: generation-1 starved sets vs logs/c4_class_mass.json -> OK
+  seed 400: expected [22, 27, 34, 36], got [22, 27, 34, 36] -> match
+  seed 401: expected [11, 16, 33, 35, 38, 45, 48], got [11, 16, 33, 35, 38, 45, 48] -> match
+  seed 402: expected [1, 13, 38, 40, 47], got [1, 13, 38, 40, 47] -> match
+  seed 403: expected [0, 12, 13, 35, 36, 37, 47], got [0, 12, 13, 35, 36, 37, 47] -> match
+  seed 404: expected [22, 26, 33], got [22, 26, 33] -> match
+
+gate A: Spearman rho = 0.3625 (null mean -0.0022), p = 0.0001 -> FAILED
+gate B: starved-minus-other mean death gen = -5.513 (null mean -0.128), p = 0.0001 -> FAILED
+Minority collapse is a live explanation for alphabet contraction. The constructed
+matched-imbalance control moves from optional to mandatory, and until it runs, every
+statement of the contraction result — in README.md, in progress-report-2.md, and in any
+report text — must name Fang et al. (2021) as an unexcluded alternative explanation.
+
+wrote logs/c4_timing.json
