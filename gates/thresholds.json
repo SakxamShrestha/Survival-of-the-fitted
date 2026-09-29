@@ -218,5 +218,224 @@
       "not. If the argmax arm shows no starved classes, the measurement is wrong rather than",
       "the soft result surprising."
     ]
+  },
+  "C-1": {
+    "name": "Shuffled transmission, replication at n = 20",
+    "committed": "2026-09-29",
+    "is_replication_gate": true,
+    "question": "Does the protective effect of intact input-to-target pairing survive a twentyfold sample?",
+    "background": [
+      "C-1 ran on 2026-09-14 at three seeds per arm and is the one control in this project",
+      "with no committed gate: its decision rule is an inline 1.25 constant in",
+      "controls/c1_shuffled.py, added in the same commit as the control itself.",
+      "analysis/consistency_checks.py flags exactly this, and it is the only outstanding",
+      "finding of its kind.",
+      "",
+      "This entry does not pretend to be a preregistration of an unseen result. The n = 3",
+      "outcome is already known and published in two progress reports: 11.3 surviving",
+      "classes intact against 1.3 shuffled, quoted as protection 'by roughly a factor of",
+      "nine'. What is preregistered here is the rule for judging the REPLICATION at n = 20,",
+      "written before those twenty chains per arm exist. It supersedes the inline 1.25",
+      "constant, which is retired."
+    ],
+    "metric": "mean surviving classes at generation 25, intact arm against shuffled arm, 20 chains per arm at tau = 1.0 and B = 128",
+    "gates": {
+      "A": {
+        "metric": "ratio of intact-arm mean surviving classes to shuffled-arm mean",
+        "condition": "the ratio is at least 3.0 at n = 20",
+        "fails_if": "it is below 3.0",
+        "meaning_if_failed": "the protective effect does not survive the larger sample and the claim is withdrawn, not merely rescaled"
+      },
+      "B": {
+        "metric": "95% bootstrap intervals of the two arm means, resampling chains",
+        "condition": "the two intervals do not overlap",
+        "fails_if": "they overlap",
+        "meaning_if_failed": "the separation is not resolvable at n = 20 and the claim must be stated as unresolved rather than as a factor"
+      }
+    },
+    "derivation": [
+      "Gate A is set at 3.0 against an observed 8.7x precisely so that it is not rigged to",
+      "pass. Effect sizes in this project shrink when the sample grows — the seed-stability",
+      "rerun took 2.94x down to 2.12x at the same fourfold increase — so a replication gate",
+      "set at the observed magnitude would fail for the wrong reason, punishing the known",
+      "small-sample inflation rather than testing whether the effect is real. 3.0 is the",
+      "level at which 'intact pairing protects the alphabet' remains a true sentence.",
+      "",
+      "Gate B uses the bootstrap over chains introduced in analysis/seed_stability_stats.py,",
+      "which is the repository's existing convention: resampling is over chains rather than",
+      "over pairs, because the pairwise quantities are not independent."
+    ],
+    "verdict_if_failed": [
+      "The nine-fold protection figure is withdrawn from README.md, progress-report-2.md and",
+      "any report text, and the C-1 row is restated as whatever the twenty chains show. The",
+      "2026-09-14 result is not deleted; it is marked superseded in gates/retractions.json",
+      "the same way 2.94x was."
+    ],
+    "verdict_if_passed": [
+      "The protection effect is real at n = 20. Replace the 'roughly nine times' wording with",
+      "the measured ratio and its interval, and record the n = 3 figure as superseded rather",
+      "than as wrong."
+    ],
+    "sanity_check": [
+      "Recomputing the first three chains of the new intact arm must reproduce the 2026-09-14",
+      "means of 11.3 and 1.3 if and only if the same seeds are used. They are not, so this is",
+      "reported as a comparison rather than enforced as a gate — but a new intact mean far",
+      "outside the old per-seed range of 9 to 13 means the harness changed, not the finding."
+    ]
+  },
+  "C-2R": {
+    "name": "No chaining, re-checked against a compute-matched reference",
+    "committed": "2026-09-29",
+    "question": "Does the chain still leave the one-step reference when that reference is given the same total training compute the chain spent?",
+    "background": [
+      "C-2 compared 25-generation chains against one-step students trained for 1500 steps,",
+      "which matches the budget of each individual chain student. C-3 then showed that",
+      "one-step agreement is an optimization quantity rather than an information limit: it",
+      "rises monotonically with training budget, from 0.142 at 375 steps to 0.306 at 12000.",
+      "",
+      "That leaves C-2's escape generations (4, 7 and 16) defined against a reference that",
+      "moves, and it leaves one serious objection unanswered. The chain spends 25 x 1500 =",
+      "37500 optimizer steps in total. A critic can say the chain does not lose information",
+      "at all — it accumulates optimization error, and a single student given the same total",
+      "compute would look just as far from the founder. This entry tests exactly that.",
+      "",
+      "The chains are not re-run. The comparison reuses the five chains per condition already",
+      "logged in logs/c2_no_chaining.json, so this judges the same chains C-2 judged and only",
+      "the reference is new."
+    ],
+    "reference_distribution": "one-step students distilled directly from generation 0 and trained for 37500 steps, the chain's entire compute budget spent in a single step",
+    "gates": {
+      "sanity": {
+        "condition": "the 1500-step reference arm reproduces C-2's means, 0.230 within [0.220, 0.243] at B = 4096 and 0.055 within [0.047, 0.064] at B = 128",
+        "fails_if": "either falls outside",
+        "meaning_if_failed": "the harness is not reproducing C-2 and nothing else in this run can be read"
+      },
+      "A": {
+        "metric": "agree_gen0 on the held-out probe pool, B = 4096",
+        "condition": "some chain generation g <= 25 falls below the 37500-step reference's 2.5th percentile",
+        "fails_if": "no generation does",
+        "meaning_if_failed": "the chain's functional decay is indistinguishable from one student given the same compute, so 'iteration destroys the function' is not supported and must be restated as accumulated optimization error"
+      },
+      "B": {
+        "metric": "n_classes_used on the held-out probe pool, B = 128",
+        "condition": "some chain generation g <= 25 falls below the 37500-step reference's 2.5th percentile",
+        "fails_if": "no generation does",
+        "meaning_if_failed": "alphabet contraction is not established against a compute-matched one-step student, and the project's headline result loses its strongest form"
+      }
+    },
+    "derivation": [
+      "37500 is not a chosen number. It is 25 generations times the 1500 steps each chain",
+      "student trains for, which is the chain's own total compute. Any smaller reference",
+      "budget leaves the accumulated-optimization-error objection open; any larger one is",
+      "comparing against a student the chain never had the resources to be.",
+      "",
+      "The 2.5th percentile is C-2's own escape criterion, reused unchanged so that the two",
+      "controls are directly comparable. 20 students per arm rather than C-2's 50, because a",
+      "37500-step student costs 25 times a standard one; 20 is the same n C-3 used for its",
+      "budget sweep."
+    ],
+    "verdict_if_failed": [
+      "If gate A fails: C-2's function result is restated. The chain is not shown to lose",
+      "anything a compute-matched single step does not, and every claim resting on the escape",
+      "generations 4 and 16 is withdrawn pending a better design.",
+      "",
+      "If gate B fails: this is the serious one. 'One step destroys the function, repetition",
+      "destroys the vocabulary' is the project's sharpest claim and it appears in",
+      "progress-report-2.md. If a compute-matched one-step student also collapses its",
+      "alphabet, that sentence is wrong and must be retracted in the same session the result",
+      "lands."
+    ],
+    "verdict_if_passed": [
+      "The escape survives the strongest available form of the C-3 objection. C-2's escape",
+      "generations stand, now qualified by the reference budget they were measured against,",
+      "and every decay claim can name a compute-matched floor rather than a step-matched one."
+    ],
+    "sanity_check": [
+      "Reported alongside the gates, not gated on: the 37500-step reference's mean agreement",
+      "should exceed C-3's 12000-step value of 0.306 at B = 4096. If it does not, the extra",
+      "budget is not buying fidelity and the compute-matched framing needs rethinking before",
+      "the gates are read."
+    ]
+  },
+  "C-4T": {
+    "name": "Matched imbalance, timing test — do starved classes die sooner?",
+    "committed": "2026-09-29",
+    "question": "Does how much transmitted signal a class receives predict how long it survives?",
+    "background": [
+      "C-4 ran on 2026-09-29 and returned a verdict of FAILED on gate A: soft-logit",
+      "transmission does starve classes, 26 of them below one effective example at the first",
+      "transmission across five chains. That closed the cheap evasion route.",
+      "",
+      "C-4's gate B was supposed to decide whether the starvation matters, and it could not.",
+      "It compared the classes starved at generation 1 against the classes absent at",
+      "generation 25, and by generation 25 between 37 and 48 of the 50 classes are absent, so",
+      "a randomly chosen set of three to seven classes already overlaps the dead set at 0.880.",
+      "The observed 0.971 against that null gives p = 0.1004 with 0.12 of headroom. The gate",
+      "passed and means nothing. The defect is in the gate, not in the data.",
+      "",
+      "The fault is that an endpoint comparison at generation 25 is saturated. Timing is not.",
+      "A class that is starved from the start and dies at generation 3 is a different object",
+      "from one that dies at generation 22, and minority collapse predicts the first.",
+      "",
+      "This gate is written before the data it reads exists. logs/c4_class_mass.json records",
+      "n_classes_used per generation but never WHICH classes, so per-class death generations",
+      "cannot be recovered from it and a re-run is required. The chains are seed-identical, so",
+      "the re-run reproduces C-4's mass and starvation numbers exactly; what is new is the",
+      "per-generation alphabet membership, which no run in this project has ever recorded."
+    ],
+    "metric": "death generation d_k of each class k: the first generation at which class k is absent from the student's predictions on the held-out probe pool and remains absent through generation 25. Classes still predicted at generation 25 are censored at d_k = 26.",
+    "gates": {
+      "A": {
+        "metric": "Spearman rank correlation between a class's effective transmitted count at generation 1 and its death generation, pooled across the five chains",
+        "condition": "the correlation is not significantly positive",
+        "fails_if": "one-sided permutation p < 0.05 for a positive correlation, permuting class labels within each chain, 10000 permutations",
+        "meaning_if_failed": "how much signal a class receives predicts how long it lives, which is what minority collapse asserts; the constructed matched-imbalance control becomes mandatory and the contraction claim must name this explanation as unexcluded"
+      },
+      "B": {
+        "metric": "difference in mean death generation between the classes starved at generation 1 and all other classes, pooled across the five chains",
+        "condition": "starved classes do not die earlier than the rest",
+        "fails_if": "one-sided permutation p < 0.05 for starved classes dying earlier, same permutation scheme",
+        "meaning_if_failed": "the same conclusion as gate A, restricted to the starved set C-4 already identified"
+      }
+    },
+    "derivation": [
+      "Gate A uses all fifty classes rather than only the three to seven starved ones. That is",
+      "the direct fix for what broke C-4's gate B: the endpoint statistic had five classes and",
+      "a saturated null, this one has fifty classes and a response variable spread over",
+      "twenty-five generations.",
+      "",
+      "Spearman rather than Pearson because effective transmitted counts are heavily skewed —",
+      "C-4 measured minima near 0.02 against a uniform 2.56 — and because death generation is",
+      "censored at 26, which makes a rank statistic the honest choice.",
+      "",
+      "The 0.05 level and the permutation scheme are the repository's existing convention,",
+      "from analysis/seed_stability_stats.py. Permuting class labels WITHIN each chain, rather",
+      "than pooling classes across chains first, keeps each chain's own death-generation",
+      "distribution fixed so the test asks only whether the class identities line up.",
+      "",
+      "Direction matters and is fixed here in advance: a POSITIVE correlation means",
+      "better-fed classes live longer, which supports minority collapse. That is the outcome",
+      "that fails this gate. A null result is what clears the objection, which means this gate",
+      "can only ever weaken the project's position or leave it unchanged — it cannot",
+      "manufacture support for the headline claim."
+    ],
+    "verdict_if_failed": [
+      "Minority collapse is a live explanation for alphabet contraction. The constructed",
+      "matched-imbalance control moves from optional to mandatory, and until it runs, every",
+      "statement of the contraction result — in README.md, in progress-report-2.md, and in any",
+      "report text — must name Fang et al. (2021) as an unexcluded alternative explanation."
+    ],
+    "verdict_if_passed": [
+      "How much signal a class receives does not predict how long it survives. Starvation is",
+      "present but inert, minority collapse is excluded as the mechanism for this result, and",
+      "C-4's gate A failure can be reported as a measured fact with no consequence for the",
+      "contraction claim."
+    ],
+    "sanity_check": [
+      "The re-run must reproduce C-4's generation-1 starvation counts exactly — 4, 7, 5, 7 and",
+      "3 for chain seeds 400 through 404 — since the seeds and configuration are unchanged. If",
+      "it does not, the re-run is not the same experiment and the timing numbers cannot be",
+      "attached to C-4's result."
+    ]
   }
 }
