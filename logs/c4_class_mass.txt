@@ -1,0 +1,41 @@
+C-4 preregistered rule, committed 2026-09-29:
+  metric   effective per-class count m_k(g) = sum over the B transmitted inputs of the teacher's softmax probability for class k, at tau = 1.0 and B = 128
+  gate A   no class falls below one effective example at the first transmission
+           fails if any class does
+  gate B   the overlap does not exceed a permutation null that reassigns which classes are starved at matched set size
+           fails if pooled permutation p < 0.05
+
+A class counts as dead if generation 25 never predicts it on the held-out probe pool. C-6 showed training-pool alphabet counts overstate what survives (6 of 50 against 9 of 50 at this bottleneck), so the probe pool is the one gate B reads. Both are reported.
+Chain seeds 400-404 do not collide with seed_stability.py (100-119, 200-219) or sampler_arm.py (300-304), so these five chains are independent of every chain already on record. The founder is seed 0, the same founder C-2, C-3 and C-6 used.
+
+founder (seed 0) memorization accuracy 0.977  (3.8s)
+uniform transmission would give 128/50 = 2.56 effective examples per class
+
+chain  starved g1  min mass g1  min mass g25  alphabet g25
+----------------------------------------------------------
+  400           4       0.0935        0.4012             5
+  401           7       0.0418        0.4447             3
+  402           5       0.0390        0.3467             7
+  403           7       0.0257        0.2351             2
+  404           3       0.0221        0.3038            13
+
+sanity arm: argmax transmission, one chain  (196s so far)
+  classes at exactly zero effective count at g1: 4
+  classes below 1.0 at g1: 4
+
+=== C-4 VERDICT  (229s) ===
+sanity: argmax arm shows 4 classes at exactly zero -> OK
+gate A: 26 starved classes at generation 1 across 5 chains -> FAILED
+gate B: pooled overlap 0.971 vs null mean 0.880, p = 0.1004 -> PASSED
+If gate A alone fails: the evasion route is closed but nothing is yet explained.
+Starvation exists; gate B is what says whether it matters.
+
+If gate B fails: minority collapse is a live competing explanation for the project's
+best result. The constructed matched-imbalance control becomes mandatory, and until it
+runs the contraction claim must be stated with this explanation named and unexcluded.
+
+If both fail: report alphabet contraction as consistent with minority collapse, and
+stop describing it as a property of iterated transmission until the constructed
+control separates the two.
+
+wrote logs/c4_class_mass.json
