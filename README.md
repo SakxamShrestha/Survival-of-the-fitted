@@ -125,6 +125,18 @@ state.
 Unlike the temperature result, this one survives being measured off the training pool. Six
 versus nine out of fifty is the same phenomenon — the vocabulary collapses either way.
 
+**An alternative explanation for this result is currently unexcluded, and it has to be stated
+alongside it.** Control C-4T found that how much transmitted signal a class receives at the
+first generation predicts how long it survives: Spearman rho = 0.363, p = 0.0001, and the
+classes starved at generation 1 die 5.51 generations earlier than the rest. That is what
+minority collapse predicts (Fang, He, Long & Su, 2021, *PNAS*), and until the constructed
+matched-imbalance control separates the two, this section cannot claim that the contraction
+is a property of iterated transmission rather than of class imbalance in the transmitted set.
+What the correlation does *not* yet distinguish is minority collapse from the simpler
+explanation that the founder's frequent classes both receive more mass and survive longer;
+the frequency-matched null and the per-class survival regression in `RESEARCH-PLAN.md` §4.3
+are what separate those, and neither needs new training.
+
 ![Code contraction](figs/fig3_code_contraction.png)
 
 The right-hand panel is the surprise. **Effective rank** — a measure of how much of the
@@ -156,8 +168,32 @@ not. The falsification is kept in the record because it is the useful part.
 
 I now write the pass/fail rule for each control into a file and commit it *before* running
 the control, so the threshold cannot be adjusted after seeing the answer. The rules live in
-`gates/thresholds.json`, and the git history is what makes them meaningful. Four controls have
-run so far. Three did damage.
+`gates/thresholds.json`, and the git history is what makes them meaningful.
+
+Each control exists to give one specific result a chance to die. The numbering is the order
+they were designed in, not the order they run in.
+
+| | what it targets | status |
+|---|---|---|
+| **C-1** | Alphabet contraction might mean nothing. Scramble which teacher output goes with which input, transmit the same outputs, and see whether the collapse survives. | **failed** — collapse got worse, and intact pairing protects the alphabet by 5.17x at n = 20 |
+| **C-2** | Iteration might do nothing a single copy does not. Train students distilled once, directly from generation 0, and ask whether the chain ever leaves that crowd. | **passed** — one step keeps 49.6 of 50 classes, the chain keeps 4.4 |
+| **C-3** | The one-step fidelity floor every decay figure is read against might be an artifact of training length rather than an information limit. | **failed** — the floor moves, 0.142 at 375 steps to 0.306 at 12,000 |
+| **C-4** | Classes might die because they are starved of transmitted signal — minority collapse, which Fang et al. (2021, *PNAS*) characterize analytically at exactly this ratio of examples to classes. | **failed** — 26 of 250 class-slots receive under one effective example at the first transmission |
+| **C-5** | Chain seeds vary the student's initialization and the transmitted subsample together. Splitting them separates optimization noise from channel noise. | not run |
+| **C-6** | Every metric might be a training metric, because the chain trains on the same 4,096 inputs everything is measured on. | **failed** — two claims withdrawn, temperature and `argmax` |
+| **C-7** | Iterated ridge regression might reproduce the whole phenomenon with no neural network involved. | not run |
+| **C-8** | Freezing the body and training only the head makes the chain a linear readout problem; surviving contraction would then be a readout effect. | not run |
+
+Two further controls were added after C-3 and C-4 forced them:
+
+| | what it targets | status |
+|---|---|---|
+| **C-2R** | C-3 moved the reference C-2's result is defined against. Give a single student the chain's entire compute budget — 25 × 1,500 = 37,500 steps — and ask whether the chain still leaves it. | **verdict unusable**, see below; the run itself produced the strongest form of the alphabet result |
+| **C-4T** | C-4 established that starvation happens but its gate could not say whether it matters. This asks whether starved classes die *sooner*. | **failed** — they die 5.51 generations earlier, p = 0.0001 |
+
+Six controls have run. Five did damage. That ratio is the argument for writing the rule down
+first — and two of the five failures are failures of my own gate design rather than of the
+result being tested, which is recorded below rather than quietly fixed.
 
 **C-6 — measure on inputs the model never trained on.** Every metric had been computed on the
 same 4,096 inputs the chain trains on. The rule, fixed in advance, was that a gap of more than
@@ -230,17 +266,26 @@ that, the finding is weak.
 It survived — and got dramatically **worse**. Shuffled chains collapse to a single surviving
 class.
 
-| arm | surviving classes (3 seeds) | mean |
-|---|---|---|
-| intact transmission | 9, 12, 13 | **11.3** |
-| shuffled transmission | 1, 2, 1 | **1.3** |
+| arm | mean surviving classes | 95% interval | spread |
+|---|---|---|---|
+| intact transmission | **7.50** | [5.65, 9.25] | 1–15, sd 4.30 |
+| shuffled transmission | **1.45** | [1.20, 1.70] | 1–3, sd 0.61 |
 
 ![C-1 shuffled control](figs/fig5_c1_shuffled_control.png)
 
 So the original framing was too strong and has been corrected. But the control handed back a
 sharper question than the one it removed: keeping the input-to-output pairing intact
-**protects** the vocabulary, by roughly a factor of nine. Three seeds only, so this is
-preliminary.
+**protects** the vocabulary, by a factor of **5.17**, against a threshold of 3.0 fixed before
+the arms were run. The intervals do not overlap.
+
+An earlier version of this section reported 11.3 against 1.3 from three seeds per arm and
+described the protection as "roughly a factor of nine." That is superseded. The intact arm's
+spread is the reason: twenty chains range from 1 to 15 surviving classes with a standard
+deviation of 4.30, and the three-seed pilot happened to draw 9, 12 and 13 — all above the
+mean, which is a one-in-eight coincidence rather than a change in the experiment. This is the
+third time a small sample in this project has overstated an effect that survived at larger n:
+2.94x became 2.12x, and 8.69x has become 5.17x. The figure above still plots the three-seed
+run and has not been regenerated.
 
 ### A theory claim in my notes turned out to be backwards
 
