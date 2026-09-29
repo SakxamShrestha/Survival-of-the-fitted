@@ -1,0 +1,45 @@
+C-2R preregistered rule, committed 2026-09-29:
+  question    Does the chain still leave the one-step reference when that reference is given the same total training compute the chain spent?
+  reference   one-step students distilled directly from generation 0 and trained for 37500 steps, the chain's entire compute budget spent in a single step
+  gate sanity  the 1500-step reference arm reproduces C-2's means, 0.230 within [0.220, 0.243] at B = 4096 and 0.055 within [0.047, 0.064] at B = 128
+           fails if either falls outside
+  gate A       some chain generation g <= 25 falls below the 37500-step reference's 2.5th percentile
+           fails if no generation does
+  gate B       some chain generation g <= 25 falls below the 37500-step reference's 2.5th percentile
+           fails if no generation does
+
+Gates are evaluated on the held-out probe pool, which the C-2R metric names explicitly for both gate A and gate B, the same choice C-2 and C-3 made. Both pools are reported.
+The same 20 student seeds (1000-1019) are used for the 1500-step sanity arm and the 37500-step gate arm, and for both B = 128 and B = 4096, so initialization and data order are identical everywhere and only the step count and bottleneck differ. These are the same seeds c2_no_chaining.py and c3_one_step.py used, so the 1500-step arm at each B is an exact re-run of 20 of C-2's own reference students.
+
+secondary check (reported, not gated):
+  Reported alongside the gates, not gated on: the 37500-step reference's mean agreement
+  should exceed C-3's 12000-step value of 0.306 at B = 4096. If it does not, the extra
+  budget is not buying fidelity and the compute-matched framing needs rethinking before
+  the gates are read.
+
+founder (seed 0) memorization accuracy 0.977  (8.7s)
+
+    B      arm   steps    n  agree mean   agree sd  agree p2.5  cls mean   cls sd  cls p2.5   elapsed
+-----------------------------------------------------------------------------------------------------
+  128   sanity    1500   20       0.054     0.0048       0.046      49.5     0.69      48.0       63s
+  128     gate   37500   20       0.066     0.0050       0.059      50.0     0.00      50.0     1537s
+ 4096   sanity    1500   20       0.230     0.0052       0.223      50.0     0.00      50.0     1605s
+ 4096     gate   37500   20       0.331     0.0066       0.319      50.0     0.00      50.0     3168s
+
+sanity: 1500-step arm at B=4096 mean 0.230 vs C-2 reference [0.220, 0.243] (nominally [0.220, 0.243]) -> OK
+sanity: 1500-step arm at B=128  mean 0.054 vs C-2 reference [0.047, 0.064] (nominally [0.047, 0.064]) -> OK
+
+=== C-2R VERDICT  (3168s) ===
+sanity: OK
+gate A (B=4096, function): chain agreement escapes the 37500-step reference's 2.5th percentile (0.319) at generation 1
+gate B (B=128, alphabet): chain alphabet escapes the 37500-step reference's 2.5th percentile (50.0) at generation 1
+
+(supplementary, not gated: agreement at B=128 escapes at generation 1; alphabet at B=4096 escapes at generation 16)
+
+The escape survives the strongest available form of the C-3 objection. C-2's escape
+generations stand, now qualified by the reference budget they were measured against,
+and every decay claim can name a compute-matched floor rather than a step-matched one.
+
+secondary (not gated): 37500-step reference mean at B=4096 0.331 vs C-3's 12000-step mean 0.306 (logs/c3_one_step.json) -> exceeds
+
+wrote logs/c2_recheck_compute_matched.json
