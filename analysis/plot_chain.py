@@ -275,9 +275,55 @@ def fig_c1():
     save(fig, "fig5_c1_shuffled_control.png")
 
 
+def fig_c3_budget():
+    """C-3: the one-step fidelity floor moves with the training budget.
+
+    Reads the sweep written by ``controls/c3_one_step.py``. The preregistered
+    ceiling is the upper bound of C-2's 1,500-step reference interval, committed
+    before the sweep ran; the measurement crosses it at four times the budget, so
+    the "floor" measures optimization rather than what the bottleneck destroys.
+    """
+    with open(os.path.join(LOGS, "c3_one_step.json")) as handle:
+        data = json.load(handle)
+    budgets = data["budgets"]
+    conds = data["conditions"]
+    means = [conds[str(b)]["probe_agree_mean"] for b in budgets]
+    lo = [conds[str(b)]["probe_agree_ci95"][0] for b in budgets]
+    hi = [conds[str(b)]["probe_agree_ci95"][1] for b in budgets]
+    threshold = data["threshold"]
+    ref = data["reference_interval"]
+
+    fig, ax = plt.subplots(figsize=(7, 4.2))
+    ax.axhspan(ref[0], ref[1], color=CAT[0], alpha=0.10)
+    ax.annotate("C-2 reference interval", (budgets[0], ref[1]),
+                textcoords="offset points", xytext=(3, -13), fontsize=9, color=CAT[0])
+    ax.axhline(threshold, color=CAT[1], linewidth=1.3, linestyle=(0, (4, 3)))
+    ax.annotate(f"preregistered ceiling = {threshold:.3f}", (budgets[-1], threshold),
+                textcoords="offset points", xytext=(-4, -14), fontsize=9,
+                color=CAT[1], ha="right")
+    ax.fill_between(budgets, lo, hi, color=CAT[0], alpha=0.22, linewidth=0)
+    ax.plot(budgets, means, color=CAT[0], linewidth=2, marker="o", markersize=4.5)
+    for b, m in zip(budgets, means):
+        # 1,500 is the sanity arm and sits on the preregistered ceiling, so its
+        # label goes below the marker to keep the dashed line readable.
+        dy = -18 if b == 1500 else 9
+        ax.annotate(f"{m:.3f}", (b, m), textcoords="offset points", xytext=(0, dy),
+                    fontsize=9, color=CAT[0], ha="center")
+    ax.set_xscale("log")
+    ax.set_xticks(budgets)
+    ax.set_xticklabels([f"{b:,}" for b in budgets])
+    ax.minorticks_off()
+    style(ax, "training steps per student (same 20 seeds at every budget)",
+          "agreement after one distillation step (held-out)",
+          "C-3: the one-step floor is not a floor — it moves with the training budget")
+    ax.set_ylim(0.10, 0.35)
+    save(fig, "fig6_c3_budget.png")
+
+
 if __name__ == "__main__":
     fig_train_vs_probe()
     fig_cka_blindness()
     fig_contraction()
     fig_bottleneck()
     fig_c1()
+    fig_c3_budget()
