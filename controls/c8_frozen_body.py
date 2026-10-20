@@ -29,8 +29,37 @@ the amendment this file forced:
     makes the same point for S-1: KL-to-soft-logits is not a log-likelihood,
     which is why the sampler arm is built on sampled hard labels.
 
-KNOWN LIMITATION OF THE TOLERANCE, found by smoke test on 2026-10-20 and NOT
-yet resolved. At bottleneck 128 in a 256-dimensional frozen feature space the
+CORRECTION 2026-10-20, second pass. The diagnosis below is WRONG and the
+number in it was measured at a saturated point. Both are left in place because
+they reached a commit message and the project's memory, and a correction that
+replaces the record rather than appending to it hides that the error happened.
+
+What is wrong. The 0.016113 figure was taken at generation 5, where only 6 of
+50 classes appear in the transmitted batch. At generation 1, where 40 classes
+appear, the same quantity is 0.498291. Measuring at generation 5 is C-4 gate
+B's failure shape - a statistic read where the problem has already collapsed.
+Any tolerance must fix the generation and report the batch's class count beside
+the value.
+
+What the cause actually is, measured rather than reasoned. The MAP's out-of-span
+fraction is 1.99e-15, so the posterior mean already lives in the data span and
+data-free directions are NOT the cause. Projecting SGD onto the span moves
+SGD-versus-MAP by +0.0015 while changing SGD's own predictions on 9.9 percent of
+points, so the estimators disagree INSIDE the span. Longer training makes
+agreement worse, not better - 0.4875 at 1500 steps, 0.6189 at 15000, 0.6646 at
+60000 - while SGD's own seed spread tightens, so SGD converges to a different
+point rather than failing to converge. LBFGS on the exact objective reproduces
+laplace_glm's MAP to 2.40e-06 in weights and 0.000000 in predictions, so the
+analytic module is correct and the fault is on the experimental side.
+
+Two defects in THIS FILE follow, neither yet fixed:
+  1. The SGD side minimizes AdamW's decoupled decay, not the posterior's
+     objective. It needs an explicit L2 term in the loss at reduction="sum".
+  2. model.head carries a bias (max 0.0930 after training) while
+     analysis/laplace_glm fits (D, K) weights with no intercept, so the GLM and
+     the head are not the same model. A constant feature column fixes it.
+
+SUPERSEDED DIAGNOSIS BELOW - do not repeat it. At bottleneck 128 in a 256-dimensional frozen feature space the
 transmitted batch can determine at most 128 of 256 feature directions;
 analysis/laplace_glm reports prior_only_directions = 128, which is that, by
 construction. In those directions the Laplace mean is exactly the prior mean,
