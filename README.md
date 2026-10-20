@@ -163,6 +163,14 @@ surviving classes at 2.12x the overlap expected by chance, with a 95% confidence
 chains from **different** founding models, the overlap is 0.93x chance — the interval sits
 inside the chance band. A permutation test on the contrast between the two gives p < 0.0001.
 
+What this does not yet establish is that the shared endpoint reflects the founder's
+*identity* rather than its output distribution. Control C-4S, run on 2026-10-20, found that
+the founder's generation-0 predicted class frequency on its own predicts how long a class
+survives, at a rank correlation of 0.4721. Frequent classes survive, and two chains from one
+founder inherit the same frequencies. Until the overlap above is measured against a null that
+holds those frequencies fixed, the measurement stands but must not be presented as evidence
+of founder identity. The null is specified and written; it has not been run.
+
 That 0.93x for the different-founder arm is measured against an empirical null, which redraws
 random subsets at each run's own survivor-set size. Measured against the analytic null
 instead, the same arm gives **0.83x**. Both are correct and they are not interchangeable:
