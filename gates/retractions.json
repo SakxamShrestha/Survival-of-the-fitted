@@ -1,0 +1,211 @@
+{
+  "_README": [
+    "A ledger of claims this project has retracted, superseded, or downgraded to unverified,",
+    "and of citations it has ruled unsuitable. It is the machine-readable counterpart to the",
+    "correction notes written in prose in PROJECT.md.",
+    "",
+    "It exists because a correction that lands in one file does not propagate to the others.",
+    "PROJECT.md recorded on 2026-09-22 that the Davari random-label attribution is unverified",
+    "and that the ICLR 2023 venue was dropped pending verification; CLAUDE.md, README.md and",
+    "both proposal files continued to assert both. The n = 20 rerun on 2026-09-21 replaced the",
+    "2.94x / 1.13x seed-stability figures; csci-proposal-FINAL.md still states them as current",
+    "fact and csci-proposal-draft.md states them in its introduction while reporting the",
+    "corrected pair later in the same document.",
+    "",
+    "Every entry here names the correction that created it and the file that records that",
+    "correction in prose. analysis/consistency_checks.py reads this file and reports any",
+    "deliverable that contradicts it. The ledger states what was retracted; it does not decide",
+    "what to do about a hit, which remains a matter for the author.",
+    "",
+    "An entry is removed when the underlying claim is verified rather than when it becomes",
+    "inconvenient. Removing one is a visible diff, which is the same protection the commit",
+    "ordering buys for gates/thresholds.json."
+  ],
+
+  "deliverables": [
+    "README.md",
+    "PROJECT.md",
+    "CLAUDE.md",
+    "RESEARCH-PLAN.md",
+    "csci-proposal-draft.md",
+    "csci-proposal-FINAL.md",
+    "progress-report-1.md",
+    "video-script.md",
+    "ARTIFACTS.md"
+  ],
+
+  "frozen_deliverables": {
+    "files": ["progress-report-1.md"],
+    "reason": [
+      "A dated coursework artifact that was submitted on 2026-09-14, before the n = 20 rerun",
+      "and before control C-6. It is a historical record of what was believed at the time and",
+      "is not retroactively corrected, so the superseded-value check skips it. Checks that",
+      "concern citations still apply, because a citation was either verified or it was not."
+    ]
+  },
+
+  "retraction_markers": [
+    "unverified",
+    "not been read",
+    "dropped pending",
+    "do not repeat",
+    "do not attribute",
+    "verify against",
+    "soften the claim",
+    "must not be presented",
+    "check the"
+  ],
+
+  "supersede_markers": [
+    "superseded",
+    "withdrawn",
+    "earlier version",
+    "an earlier run",
+    "the earlier",
+    "overstated",
+    "earlier number",
+    "previously reported",
+    "no longer",
+    "correction,",
+    "corrected downward",
+    "inflated",
+    "obsolete",
+    "replaced by",
+    "not the current",
+    "~~"
+  ],
+
+  "heldout_markers": [
+    "held-out",
+    "held out",
+    "probe pool",
+    "off the training pool",
+    "neither of them trained on",
+    "inputs it did not train on",
+    "generalization metric"
+  ],
+
+  "banned_citations": [
+    {
+      "id": "arXiv:2601.13100",
+      "reason": "Unrefereed preprint containing no empirical work. Known to be real but unsuitable as authority.",
+      "recorded_in": "CLAUDE.md",
+      "exempt": ["CLAUDE.md", "PROJECT.md", "gates/retractions.json"]
+    },
+    {
+      "id": "arXiv:2608.08572",
+      "reason": "Unrefereed preprint. Known to be real but unsuitable as authority.",
+      "recorded_in": "CLAUDE.md",
+      "exempt": ["CLAUDE.md", "PROJECT.md", "gates/retractions.json"]
+    }
+  ],
+
+  "retracted_attributions": [
+    {
+      "name": "davari-random-label-arm",
+      "retracted": "2026-09-22",
+      "recorded_in": "PROJECT.md",
+      "patterns": ["random-label arm", "random label arm"],
+      "exempt": ["PROJECT.md", "gates/retractions.json"],
+      "reason": [
+        "An earlier entry credited Davari et al. (arXiv:2210.16156) with a random-label",
+        "memorization arm and linear-probe accuracies of roughly 70% versus 10%. The abstract",
+        "contains none of those and was checked directly. The paper body has not been read, so",
+        "the attribution is unverified. The general CKA-unreliability point stands on the",
+        "abstract alone and may still be cited."
+      ]
+    },
+    {
+      "name": "davari-venue-iclr-2023",
+      "retracted": "2026-09-22",
+      "recorded_in": "PROJECT.md",
+      "patterns": ["ICLR 2023", "International Conference on Learning Representations (ICLR 2023)"],
+      "exempt": ["PROJECT.md", "gates/retractions.json"],
+      "reason": [
+        "The venue was asserted without checking and has been dropped pending verification.",
+        "Cite the arXiv identifier until the venue is confirmed."
+      ]
+    }
+  ],
+
+  "superseded_values": [
+    {
+      "value": "2.94",
+      "replaced_by": "2.12",
+      "superseded": "2026-09-21",
+      "recorded_in": "PROJECT.md",
+      "reason": "Same-founder Jaccard ratio from five chains with ten pairwise comparisons and no interval. The n = 20 rerun (logs/seed_stability_n20.json) gives 2.12x against the empirical null, with a 95% interval."
+    },
+    {
+      "value": "1.13",
+      "replaced_by": "0.93",
+      "superseded": "2026-09-21",
+      "recorded_in": "PROJECT.md",
+      "reason": "Cross-founder Jaccard ratio from five chains. The n = 20 rerun gives 0.93x against the empirical null."
+    },
+    {
+      "value": "0.188",
+      "replaced_by": "0.130",
+      "superseded": "2026-09-21",
+      "recorded_in": "PROJECT.md",
+      "reason": "Generation-20 agreement with generation 0 at tau = 1.0, B = 4096, measured on the training pool. Control C-6 established that the published pilot agreements are training metrics; the held-out generation-25 value is 0.130."
+    },
+    {
+      "value": "0.282",
+      "replaced_by": "0.138",
+      "superseded": "2026-09-21",
+      "recorded_in": "PROJECT.md",
+      "reason": "Generation-20 training-pool agreement at tau = 0.5, B = 4096. Held-out generation-25 value is 0.138; the gap of 0.081 breached the preregistered C-6 threshold."
+    },
+    {
+      "value": "0.689",
+      "replaced_by": "0.167",
+      "superseded": "2026-09-21",
+      "recorded_in": "PROJECT.md",
+      "reason": "Generation-20 training-pool agreement under argmax transmission. The held-out generation-25 value is 0.167, a gap of 0.487, and the gap at generation 1 is 0.753. Argmax preserves the founder's memorized lookup table on memorized points, not its function."
+    }
+  ],
+
+  "pool_scoped_fields": [
+    {
+      "field": "cka_prev",
+      "measured_on": ["training pool"],
+      "not_measured_on": ["held-out probe pool"],
+      "verify_absent_from": "logs/c6_probe_pool.json",
+      "evidence": [
+        "cka_prev is written only by spike_iterated_distill.py and appears only in the six",
+        "pilot .jsonl logs, all of which are training-pool runs. controls/c6_probe_pool.py",
+        "computes cka_gen0 on the probe pool and never computes a consecutive-generation CKA.",
+        "No held-out consecutive-generation CKA value exists anywhere in this repository."
+      ],
+      "prose_aliases": [
+        "consecutive generations",
+        "consecutive generation",
+        "CKA vs prev",
+        "CKA between consecutive"
+      ],
+      "training_pool_only_values": ["0.959", "0.950"],
+      "reason": [
+        "Pairing a consecutive-generation CKA with a held-out agreement figure presents two",
+        "measurements from different pools as one observation. The CKA figure that is unaffected",
+        "by the pool is cka_gen0 (0.642 training against 0.650 held-out), which is a different",
+        "quantity from the one the claim rests on."
+      ]
+    }
+  ],
+
+  "baseline_scoped_ratios": {
+    "source_log": "logs/seed_stability_n20.txt",
+    "reason": [
+      "Each arm of the seed-stability sweep yields two ratios: observed Jaccard over the",
+      "analytic random-subset baseline, which the log prints, and observed Jaccard over the",
+      "empirical null, which analysis/seed_stability_stats.py computes and the deliverables",
+      "quote. Both are correct and they are measured against different nulls.",
+      "",
+      "CLAUDE.md requires that two sources which disagree be reported side by side and never",
+      "quietly resolved into one. Arm A's pair (1.99x analytic, 2.12x empirical) is flagged in",
+      "CLAUDE.md and .claude/fence_test.md. Arm C's pair (1.73x, 1.27x) is discussed in",
+      "PROJECT.md. Arm B's analytic ratio has never appeared in any deliverable."
+    ]
+  }
+}
