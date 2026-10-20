@@ -96,8 +96,24 @@ def linear_cka(X, Y):
 
 # ---------------------------------------------------------------- training
 
-def train(model, X, targets, steps, bs, lr, wd, soft, tau, device):
-    opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
+def train(model, X, targets, steps, bs, lr, wd, soft, tau, device, params=None):
+    """Train `model`, optionally optimizing only `params`.
+
+    `params` is last and defaults to None so that every existing positional
+    caller is unaffected, and the None branch passes `model.parameters()`
+    exactly as before rather than a reconstruction of it. Three controls assert
+    the founder reproduces at 0.977294921875, so this path has to stay
+    byte-identical, not merely equivalent.
+
+    A caller training a submodule must both freeze the rest
+    (`model.body.requires_grad_(False)`) and pass the subset here. Freezing
+    alone is not enough: AdamW still receives the frozen tensors, and with a
+    non-zero weight decay it would continue to shrink them.
+    """
+    opt = torch.optim.AdamW(
+        model.parameters() if params is None else params,
+        lr=lr, weight_decay=wd,
+    )
     n = X.shape[0]
     model.train()
     for _ in range(steps):
