@@ -1,0 +1,44 @@
+C-4S preregistered rule, committed 2026-10-15:
+  question What predicts how long a class survives — the signal it receives in transmission, or properties the founder already had before any transmission happened?
+  gate A  founder generation-0 class frequency does not by itself predict how long a class survives
+          fails if one-sided permutation p < 0.05 for a positive correlation, permuting death generations within each chain, over 10000 permutations
+  gate B  the founder's head geometry carries no information about survival time beyond what its predicted class frequency already carries
+          fails if two-sided permutation p < 0.05 for the partial correlation, permuting the residualised head norms within each chain, over 10000 permutations
+
+No chains are trained. Death generations and generation-1 effective transmitted counts are read unmodified from logs/c4_timing.json; that file is read and never rewritten. The founder is rebuilt from train_seed 0 to obtain five per-class predictors on the held-out probe pool at probe_seed 9000 - predicted frequency, mean top-1 margin, head weight-row L2 norm, head weight-row sum, and mean feature norm - none of which any existing log records. The founder is one model, so its five predictors are identical across the five chains and are repeated when pooling; only the death generations differ per chain.
+
+rank backend: analysis/rank_stats.py (numpy); C-4T backend was scipy.stats.spearmanr
+
+founder (seed 0) memorization accuracy 0.977294921875  (4.3s)
+
+sanity:
+  founder memorization accuracy reproduces logs/c4_timing.json: expected 0.977294921875, got 0.977294921875 -> match
+  founder predicted frequencies account for every probe point: expected 4096, got 4096 -> match
+  every founder-side predictor has one entry per class: expected 50, got [50] -> match
+  chain 400 mean death generation reproduces: expected 17.56, got 17.56 -> match
+  chain 401 mean death generation reproduces: expected 16.88, got 16.88 -> match
+  chain 402 mean death generation reproduces: expected 18.76, got 18.76 -> match
+  chain 403 mean death generation reproduces: expected 17.64, got 17.64 -> match
+  chain 404 mean death generation reproduces: expected 18.28, got 18.28 -> match
+
+gate B residual headroom: head norm 0.9683, death generation 0.7771 of unresidualised rank variance (committed floor 0.01)
+
+=== C-4S VERDICT  (17s) ===
+gate A: pooled Spearman(founder frequency, death gen) = 0.4721  (null mean 0.0002, sd 0.0638, range [-0.2547, 0.2193]), p = 0.0001 -> FAILED
+gate B: pooled partial Spearman(head row L2 norm, death gen | founder frequency) = -0.1723  (null mean -0.0004, sd 0.0637, range [-0.2250, 0.2426]), p = 0.0067 -> FAILED
+          residual rank variance retained: head norm 0.9683, death generation 0.7771 (committed floor 0.01)
+
+Descriptives, no gate attached - the committed rule reports these with
+intervals and takes no decision from them (six gates at 0.05 would be a
+multiple-comparisons problem). Spearman against death generation:
+  mean_top1_margin       rho = +0.1233  95% [-0.0576, +0.2862]
+  head_row_sum           rho = +0.3363  95% [+0.1771, +0.4787]
+  mean_feature_norm      rho = +0.0979  95% [-0.0808, +0.2630]
+  transmitted_count_g1   rho = +0.1798  95% [+0.0095, +0.3316]
+Survival time is predicted by properties the founder had before any transmission. The
+founder-identity claim in PROJECT.md must be restated to say what it adds over founder
+class frequency, and the frequency-matched overlap null in RESEARCH-PLAN.md section 4.3
+item 3 becomes a prerequisite for any further statement about founder identity rather than
+an improvement to the statistics.
+
+wrote logs/c4_survival_regression.json
