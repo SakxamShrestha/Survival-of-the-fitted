@@ -330,6 +330,63 @@ def fig_c3_budget():
     save(fig, "fig6_c3_budget.png")
 
 
+def fig_c4o_null_separation():
+    """C-4O: the two nulls sit on top of each other, so neither gate is readable.
+
+    The point of this figure is a negative one and it is the clearest thing the
+    period produced. The observed overlap sits far to the right of both nulls,
+    which is why a p-value of 1e-4 was available against either. But the
+    frequency-matched null and the uniform null differ by 0.0009 when the
+    matched null's own standard deviation is 0.0052, so the weighting that was
+    supposed to make the comparison informative did not move it at all. Reading
+    a verdict off the right-hand gap would have been reading the uniform null
+    under another name.
+    """
+    with open(os.path.join(LOGS, "c4o_overlap_null.json")) as handle:
+        data = json.load(handle)
+    gate = data["gate_a_jaccard"]
+
+    fig, ax = plt.subplots(figsize=(7.4, 4.3))
+    lo = min(gate["null_min"], gate["uniform_null_mean"] - 4 * gate["uniform_null_sd"])
+    hi = max(gate["null_max"], gate["observed"]) + 0.01
+    bins = [lo + (hi - lo) * i / 70.0 for i in range(71)]
+
+    # The null distributions are not stored in the log - only their summaries -
+    # so the curves are the Gaussian the reported mean and sd describe. That is
+    # an approximation and is labelled as one; the floor comparison this figure
+    # exists to show depends only on those two summaries.
+    import math
+    for mean, sd, color, label in (
+        (gate["uniform_null_mean"], gate["uniform_null_sd"], MUTED,
+         f"uniform null (mean {gate['uniform_null_mean']:.4f})"),
+        (gate["null_mean"], gate["null_sd"], CAT[1],
+         f"frequency-matched null (mean {gate['null_mean']:.4f})"),
+    ):
+        y = [math.exp(-0.5 * ((b - mean) / sd) ** 2) for b in bins]
+        ax.plot(bins, y, color=color, linewidth=2, label=label)
+        ax.fill_between(bins, y, color=color, alpha=0.12)
+
+    ax.axvline(gate["observed"], color=CAT[0], linewidth=2.2)
+    ax.annotate(f"observed {gate['observed']:.4f}",
+                (gate["observed"], 0.92), textcoords="offset points", xytext=(-9, 0),
+                fontsize=10, color=CAT[0], ha="right", weight="bold")
+    ax.annotate(
+        f"the two nulls differ by {gate['null_separation']:.4f},\nagainst a floor of "
+        f"{gate['separation_floor']:.4f} — so this\ncomparison measures nothing",
+        (gate["null_mean"], 0.55), textcoords="offset points", xytext=(26, 0),
+        fontsize=9.5, color=INK, ha="left", va="center",
+        arrowprops=dict(arrowstyle="-", color=MUTED, linewidth=1.1,
+                        shrinkA=2, shrinkB=6))
+
+    ax.set_ylim(0, 1.22)
+    ax.set_yticks([])
+    style(ax, "mean pairwise Jaccard among Arm A's twenty survivor sets",
+          "null density (normal fit to the reported mean and sd)",
+          "C-4O: the matched null never left the uniform null, so no verdict was taken")
+    ax.legend(frameon=False, fontsize=9.5, labelcolor=INK, loc="upper left")
+    save(fig, "fig7_c4o_null_separation.png")
+
+
 if __name__ == "__main__":
     fig_train_vs_probe()
     fig_cka_blindness()
@@ -337,3 +394,4 @@ if __name__ == "__main__":
     fig_bottleneck()
     fig_c1()
     fig_c3_budget()
+    fig_c4o_null_separation()
