@@ -159,21 +159,31 @@ def fig_cka_blindness():
     measures on the same 0-1 scale, so they share one axis."""
     rows = load("tau1.0_b4096.jsonl")
     fig, ax = plt.subplots(figsize=(7, 4.2))
-    # Agreement is read from the C-6 probe pool; CKA stays on the original log,
-    # which is the only place cka_prev is recorded. The contrast only sharpens:
-    # held-out agreement is 0.130 rather than the 0.164 measured on training data.
-    _, agree = c6_col(load_c6()["tau1.0_b4096"], "probe", "agree_gen0")
+    # Every curve carries the pool it was measured on in its own label. An
+    # earlier version of this figure plotted cka_prev against the held-out
+    # agreement alone, which presented two pools as one observation: cka_prev
+    # is recorded only on the training pool, so the comparison the headline
+    # claim rests on has to be the training-pool pair. The held-out agreement
+    # is kept as a third curve because it is the honest generalization figure
+    # and the blindness holds against either, but it is no longer the only
+    # agreement curve on the axes.
     x, cka = col(rows, "cka_prev")
+    _, agree_train = col(rows, "agree_gen0")
+    _, agree_probe = c6_col(load_c6()["tau1.0_b4096"], "probe", "agree_gen0")
     ax.plot(x, cka, color=CAT[1], linewidth=2, marker="s", markersize=4,
-            label="CKA vs previous generation")
-    ax.plot(x, agree, color=CAT[0], linewidth=2, marker="o", markersize=4,
-            label="functional agreement with generation 0 (held-out)")
-    ax.annotate(f"{cka[-1]:.3f}", (x[-1], cka[-1]), textcoords="offset points",
-                xytext=(7, 0), fontsize=9.5, color=CAT[1], va="center", weight="bold")
-    ax.annotate(f"{agree[-1]:.3f}", (x[-1], agree[-1]), textcoords="offset points",
-                xytext=(7, 0), fontsize=9.5, color=CAT[0], va="center", weight="bold")
+            label="CKA vs previous generation (training pool)")
+    ax.plot(x, agree_train, color=CAT[0], linewidth=2, marker="o", markersize=4,
+            label="agreement with generation 0 (training pool)")
+    ax.plot(x, agree_probe, color=CAT[0], linewidth=2, marker="o", markersize=3,
+            linestyle=(0, (5, 2)), alpha=0.75,
+            label="agreement with generation 0 (held-out)")
+    for series, color, offset in ((cka, CAT[1], 0), (agree_train, CAT[0], 5),
+                                  (agree_probe, CAT[0], -8)):
+        ax.annotate(f"{series[-1]:.3f}", (x[-1], series[-1]),
+                    textcoords="offset points", xytext=(7, offset), fontsize=9.5,
+                    color=color, va="center", weight="bold")
     ax.axhline(CHANCE, color=MUTED, linewidth=1.2, linestyle=(0, (4, 3)))
-    style(ax, "generation", "similarity (both measures, 0-1)",
+    style(ax, "generation", "similarity (all measures, 0-1)",
           "CKA reports near-identity exactly where the models have stopped agreeing")
     ax.set_ylim(-0.03, 1.02)
     ax.set_xlim(0.2, 27.5)
@@ -251,8 +261,8 @@ def fig_bottleneck():
 
 
 def fig_c1():
-    """C-1: intact versus shuffled transmission, 3 seeds per arm."""
-    with open(os.path.join(LOGS, "c1_shuffled.json")) as handle:
+    """C-1: intact versus shuffled transmission, 20 seeds per arm."""
+    with open(os.path.join(LOGS, "c1_shuffled_n20.json")) as handle:
         data = json.load(handle)
     fig, ax = plt.subplots(figsize=(7.2, 4.4))
     arms = (("intact", CAT[0], "intact transmission"),

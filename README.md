@@ -103,16 +103,27 @@ This is the most useful thing the project has produced so far, and it was an acc
 
 CKA (Centered Kernel Alignment) is a standard way of asking whether two networks have
 learned the same thing, and it was the main metric in my original proposal. Measured between
-consecutive generations it climbs to **0.959** — which reads as "these models are
-essentially identical" — at exactly the point where the models' actual predictions agree only
-**0.130** of the time on held-out inputs.
+consecutive generations on the pool the chain trains on, it climbs to **0.959** — which reads
+as "these models are essentially identical" — while functional agreement with the founding
+model, measured on that same pool, falls to **0.164**. The two curves cross between
+generations two and three and head in opposite directions.
 
 ![CKA blindness](figs/fig2_cka_blindness.png)
 
-The two lines cross at generation three and head in opposite directions. Had I reported the
-metric I originally proposed, I would have concluded that nothing was happening. I now report
+Both headline numbers come from one pool, because a consecutive-generation CKA is only
+recorded there; no held-out counterpart for it exists in this repository. An earlier version
+of this figure plotted the CKA curve against the held-out agreement curve alone, which
+presented two different pools as a single observation, and that pairing is withdrawn. The
+figure above now carries all three curves with the pool named on each. The dashed curve is
+the honest generalization figure, falling from 0.236 to 0.130; it sits below CKA from the
+first generation and never crosses it, so the blindness holds whichever agreement curve is
+read against CKA.
+
+Had I reported the metric I originally proposed, I would have concluded that nothing was
+happening. I now report
 three metrics together, and CKA only as a warning. (This blindness was already documented by
-Davari et al., ICLR 2023 — so this is a replication in a new setting, not a discovery.)
+Davari et al., arXiv:2210.16156 — so this is a replication in a new setting, not a
+discovery.)
 
 ### A tight bottleneck makes the model stop using most of its vocabulary
 
@@ -151,6 +162,12 @@ surviving classes at 2.12x the overlap expected by chance, with a 95% confidence
 [0.152, 0.236] against a chance level whose upper tail reaches only 0.102. Running twenty
 chains from **different** founding models, the overlap is 0.93x chance — the interval sits
 inside the chance band. A permutation test on the contrast between the two gives p < 0.0001.
+
+That 0.93x for the different-founder arm is measured against an empirical null, which redraws
+random subsets at each run's own survivor-set size. Measured against the analytic null
+instead, the same arm gives **0.83x**. Both are correct and they are not interchangeable:
+they are ratios against different baselines, and the log records both. Neither is
+distinguishable from chance, which is the claim the arm actually supports.
 
 An earlier version of this section reported 2.94x and 1.13x from five chains per arm. Those
 came from ten pairwise comparisons with no interval, and the effect size was inflated. The
