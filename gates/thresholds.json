@@ -13,7 +13,6 @@
     "Each threshold carries a derivation. A threshold without one is an arbitrary constant",
     "wearing a harness, and an examiner's first question is 'who chose this number'."
   ],
-
   "C-6": {
     "name": "Held-out probe pool",
     "committed": "2026-09-21",
@@ -44,7 +43,6 @@
       "wrong, not that the finding is real."
     ]
   },
-
   "C-2": {
     "name": "No chaining",
     "committed": "2026-09-21",
@@ -88,7 +86,6 @@
       "a one-step student already sees only about 2.6 examples per class."
     ]
   },
-
   "C-3": {
     "name": "One-step fidelity baseline",
     "committed": "2026-09-22",
@@ -109,7 +106,10 @@
       "anyone saying so."
     ],
     "metric": "one-step agree_gen0 at B = 4096 on the held-out probe pool, as training steps increase from the standard 1500",
-    "reference_interval": [0.220, 0.243],
+    "reference_interval": [
+      0.22,
+      0.243
+    ],
     "reference_provenance": "logs/c2_no_chaining.json, 50 one-step students at 1500 steps, probe pool, 95% CI",
     "threshold": 0.243,
     "fails_if": "one-step agreement at 4x the training budget (6000 steps) exceeds 0.243, the upper bound of the 1500-step reference interval",
@@ -130,7 +130,7 @@
       "implementation detail; and the C-2 escape generations (4, 7, 16) need re-checking,",
       "since they are defined relative to a reference distribution that itself moves.",
       "",
-      "This does not invalidate C-2 — the chain still leaves the reference — but it changes",
+      "This does not invalidate C-2 \u2014 the chain still leaves the reference \u2014 but it changes",
       "what the reference means."
     ],
     "verdict_if_passed": [
@@ -144,7 +144,7 @@
     ]
   },
   "C-4": {
-    "name": "Matched imbalance — does soft-logit transmission starve classes?",
+    "name": "Matched imbalance \u2014 does soft-logit transmission starve classes?",
     "committed": "2026-09-29",
     "question": "Is alphabet contraction explained by minority collapse under class imbalance in the transmitted set, rather than by anything iteration does?",
     "background": [
@@ -255,8 +255,8 @@
     },
     "derivation": [
       "Gate A is set at 3.0 against an observed 8.7x precisely so that it is not rigged to",
-      "pass. Effect sizes in this project shrink when the sample grows — the seed-stability",
-      "rerun took 2.94x down to 2.12x at the same fourfold increase — so a replication gate",
+      "pass. Effect sizes in this project shrink when the sample grows \u2014 the seed-stability",
+      "rerun took 2.94x down to 2.12x at the same fourfold increase \u2014 so a replication gate",
       "set at the observed magnitude would fail for the wrong reason, punishing the known",
       "small-sample inflation rather than testing whether the effect is real. 3.0 is the",
       "level at which 'intact pairing protects the alphabet' remains a true sentence.",
@@ -279,7 +279,7 @@
     "sanity_check": [
       "Recomputing the first three chains of the new intact arm must reproduce the 2026-09-14",
       "means of 11.3 and 1.3 if and only if the same seeds are used. They are not, so this is",
-      "reported as a comparison rather than enforced as a gate — but a new intact mean far",
+      "reported as a comparison rather than enforced as a gate \u2014 but a new intact mean far",
       "outside the old per-seed range of 9 to 13 means the harness changed, not the finding."
     ]
   },
@@ -296,7 +296,7 @@
       "That leaves C-2's escape generations (4, 7 and 16) defined against a reference that",
       "moves, and it leaves one serious objection unanswered. The chain spends 25 x 1500 =",
       "37500 optimizer steps in total. A critic can say the chain does not lose information",
-      "at all — it accumulates optimization error, and a single student given the same total",
+      "at all \u2014 it accumulates optimization error, and a single student given the same total",
       "compute would look just as far from the founder. This entry tests exactly that.",
       "",
       "The chains are not re-run. The comparison reuses the five chains per condition already",
@@ -358,7 +358,7 @@
     ]
   },
   "C-4T": {
-    "name": "Matched imbalance, timing test — do starved classes die sooner?",
+    "name": "Matched imbalance, timing test \u2014 do starved classes die sooner?",
     "committed": "2026-09-29",
     "question": "Does how much transmitted signal a class receives predict how long it survives?",
     "background": [
@@ -404,8 +404,8 @@
       "a saturated null, this one has fifty classes and a response variable spread over",
       "twenty-five generations.",
       "",
-      "Spearman rather than Pearson because effective transmitted counts are heavily skewed —",
-      "C-4 measured minima near 0.02 against a uniform 2.56 — and because death generation is",
+      "Spearman rather than Pearson because effective transmitted counts are heavily skewed \u2014",
+      "C-4 measured minima near 0.02 against a uniform 2.56 \u2014 and because death generation is",
       "censored at 26, which makes a rank statistic the honest choice.",
       "",
       "The 0.05 level and the permutation scheme are the repository's existing convention,",
@@ -416,14 +416,14 @@
       "Direction matters and is fixed here in advance: a POSITIVE correlation means",
       "better-fed classes live longer, which supports minority collapse. That is the outcome",
       "that fails this gate. A null result is what clears the objection, which means this gate",
-      "can only ever weaken the project's position or leave it unchanged — it cannot",
+      "can only ever weaken the project's position or leave it unchanged \u2014 it cannot",
       "manufacture support for the headline claim."
     ],
     "verdict_if_failed": [
       "Minority collapse is a live explanation for alphabet contraction. The constructed",
       "matched-imbalance control moves from optional to mandatory, and until it runs, every",
-      "statement of the contraction result — in README.md, in progress-report-2.md, and in any",
-      "report text — must name Fang et al. (2021) as an unexcluded alternative explanation."
+      "statement of the contraction result \u2014 in README.md, in progress-report-2.md, and in any",
+      "report text \u2014 must name Fang et al. (2021) as an unexcluded alternative explanation."
     ],
     "verdict_if_passed": [
       "How much signal a class receives does not predict how long it survives. Starvation is",
@@ -432,13 +432,12 @@
       "contraction claim."
     ],
     "sanity_check": [
-      "The re-run must reproduce C-4's generation-1 starvation counts exactly — 4, 7, 5, 7 and",
-      "3 for chain seeds 400 through 404 — since the seeds and configuration are unchanged. If",
+      "The re-run must reproduce C-4's generation-1 starvation counts exactly \u2014 4, 7, 5, 7 and",
+      "3 for chain seeds 400 through 404 \u2014 since the seeds and configuration are unchanged. If",
       "it does not, the re-run is not the same experiment and the timing numbers cannot be",
       "attached to C-4's result."
     ]
   },
-
   "C-4F": {
     "name": "Frequency-matched null for the starved-class timing effect",
     "committed": "2026-10-15",
@@ -484,14 +483,14 @@
     "metric": "death generation d_k exactly as C-4T defines it (the first generation at which class k is absent from the student's predictions on the held-out probe pool and remains absent through generation 25; classes still predicted at generation 25 are censored at 26), paired with founder generation-0 predicted class frequency, the number of held-out probe-pool points the founder assigns to class k by argmax",
     "gates": {
       "A": {
-        "metric": "difference in mean death generation between the classes starved at generation 1 and all other classes, pooled across the five chains — the same statistic C-4T gate B used, against a different null",
+        "metric": "difference in mean death generation between the classes starved at generation 1 and all other classes, pooled across the five chains \u2014 the same statistic C-4T gate B used, against a different null",
         "condition": "the starved classes do not die earlier than the rest once the null is matched on founder generation-0 predicted frequency",
-        "fails_if": "one-sided permutation p < 0.05 for starved classes dying earlier, where the null draws fake starved sets of the observed per-chain size carrying the same founder-frequency stratum profile as the real starved set — five strata of ten classes each, formed by ranking the fifty classes on founder generation-0 predicted frequency — over 10000 permutations",
+        "fails_if": "one-sided permutation p < 0.05 for starved classes dying earlier, where the null draws fake starved sets of the observed per-chain size carrying the same founder-frequency stratum profile as the real starved set \u2014 five strata of ten classes each, formed by ranking the fifty classes on founder generation-0 predicted frequency \u2014 over 10000 permutations",
         "meaning_if_failed": "starvation predicts death timing beyond the founder's own class frequency, so minority collapse is not reducible to the boring explanation and the constructed matched-imbalance control at depth is owed",
         "meaning_if_passed": "the timing effect is a founder-frequency effect; C-4T's gate B result must be restated as such, and 'frequent classes survive' moves from a rival to the leading account of alphabet contraction, which C-4S then has to measure directly"
       },
       "B": {
-        "metric": "pooled Spearman rank correlation between effective transmitted count at generation 1 and death generation — the same statistic C-4T gate A used, against a different null",
+        "metric": "pooled Spearman rank correlation between effective transmitted count at generation 1 and death generation \u2014 the same statistic C-4T gate A used, against a different null",
         "condition": "the correlation is not significantly positive once the null permutes death generations only within founder-frequency strata",
         "fails_if": "one-sided permutation p < 0.05 for a positive correlation, where the null permutes each chain's death generations within the five founder-frequency strata rather than across all fifty classes, over 10000 permutations",
         "meaning_if_failed": "the dose-response relation between transmitted signal and survival time is not an artifact of founder frequency, and the same consequence as gate A follows",
@@ -588,11 +587,10 @@
       "logs/c4_timing.json is read and never rewritten."
     ]
   },
-
   "C-4S": {
     "name": "Per-class survival regression",
     "committed": "2026-10-15",
-    "question": "What predicts how long a class survives — the signal it receives in transmission, or properties the founder already had before any transmission happened?",
+    "question": "What predicts how long a class survives \u2014 the signal it receives in transmission, or properties the founder already had before any transmission happened?",
     "background": [
       "RESEARCH-PLAN.md section 4.3 calls this analysis 'free, and the analysis most likely to",
       "change the conclusion', and states the stake plainly: if founder class frequency alone",
@@ -662,8 +660,8 @@
       "",
       "The 0.05 level, the 10000 permutations and the within-chain permutation scheme are carried",
       "over from C-4T unchanged, for comparability. Only two of the six predictors carry gates.",
-      "The other four — top-1 margin, head row sum, mean feature norm, and generation-1",
-      "transmitted count — are reported with their correlations and bootstrap intervals as",
+      "The other four \u2014 top-1 margin, head row sum, mean feature norm, and generation-1",
+      "transmitted count \u2014 are reported with their correlations and bootstrap intervals as",
       "descriptives. This is deliberate: six gates at 0.05 would be a multiple-comparisons",
       "problem, and the two that carry decisions are the two whose outcomes change what the",
       "report claims."
@@ -690,6 +688,162 @@
       "Death generations are read from logs/c4_timing.json and must reproduce the per-chain mean",
       "death generations that log already records. logs/c4_timing.json is read and never",
       "rewritten."
+    ]
+  },
+  "C-4O": {
+    "name": "Frequency-matched null for the same-founder survivor-set overlap",
+    "committed": "2026-10-20",
+    "question": "Does the same-founder survivor-set overlap survive a null that draws survivors in proportion to the founder's own generation-0 class frequency, or does 'founder identity' reduce to 'founder class-frequency imbalance'?",
+    "background": [
+      "C-4S ran on 2026-10-20 and failed both gates. Founder generation-0 predicted class",
+      "frequency alone correlates with death generation at 0.4721 over 10000 within-chain",
+      "permutations, p = 1.0e-4, which is a larger correlation than the 0.3625 transmitted-count",
+      "effect C-4T rests on. Frequent classes survive longer, and two chains descending from one",
+      "founder inherit the same class frequencies.",
+      "",
+      "That makes the project's strongest claim unsafe as stated. Arm A of the n = 20",
+      "seed-stability run gives a mean pairwise Jaccard of 0.193 among the survivor sets of",
+      "twenty chains from one shared founder, against an empirical null of 0.091 - the 2.12x",
+      "figure - with a 95% interval of [0.152, 0.236] and a cross-arm permutation p = 1.0e-4.",
+      "Every one of those numbers is measured against a null that draws survivors uniformly over",
+      "the fifty classes. A uniform null knows nothing about the founder, so under it",
+      "'same founder' and 'same output frequencies' are not separable, exactly as C-4T's uniform",
+      "nulls could not separate 'starved' from 'founder-rare'. This is the same defect in a",
+      "second place, and it was found by a control rather than by rereading the claim.",
+      "",
+      "C-4S's committed consequence names this control as a prerequisite for any further",
+      "statement about founder identity rather than as an improvement to the statistics, and",
+      "README.md and PROJECT.md were qualified on 2026-10-20 to say the overlap must not be",
+      "presented as evidence of founder identity until it has run. This entry is what lifts or",
+      "confirms that qualification.",
+      "",
+      "Both outcomes cost something and that is recorded here before the run. If the overlap",
+      "survives frequency matching, founder identity adds something beyond the founder's output",
+      "distribution, the qualification is lifted, and the 2.12x result is stronger than it was",
+      "before C-4S because it has now survived the challenge C-4S raised. If it does not, the",
+      "founder-identity claim is withdrawn as such and restated as a class-frequency claim,",
+      "which is the 'frequent classes survive' account RESEARCH-PLAN.md section 4.3 names as the",
+      "boring rival, and PROJECT.md's strongest claim goes with it.",
+      "",
+      "No chains are trained. Arm A's twenty survivor sets are read unmodified from",
+      "logs/seed_stability_n20.json. The founder is rebuilt from founder_seed 0 at 3000 steps,",
+      "which run_seed_stability.py's Arm A founder and controls/c4_timing.py's founder both are,",
+      "verified by the memorization accuracy 0.977294921875 that both logs record.",
+      "",
+      "The weights are measured on the TRAINING pool, make_pool(seed=0, kind='noise'), and not",
+      "on the held-out probe pool C-4F and C-4S used. This is deliberate and is the one place",
+      "this control could have repeated a defect the project has already paid for:",
+      "run_seed_stability.py computes each chain's survivor set as the classes the final teacher",
+      "predicts on that training pool, so a probe-pool frequency vector would be a weighting from",
+      "one pool applied to sets defined on another - the same splice withdrawn from",
+      "figs/fig2_cka_blindness.png on 2026-10-20. Each control's covariate is measured on the",
+      "pool its outcome is defined on, and the two controls differ for that reason and not by",
+      "oversight."
+    ],
+    "metric": "mean pairwise set overlap among Arm A's twenty survivor sets - 190 pairs - computed by analysis/overlap_stats.py, against a null drawn by draw_survivors_weighted at the observed per-run set sizes with class draw probability proportional to the founder's generation-0 predicted class frequency on the training pool",
+    "sampler_limitation": [
+      "draw_survivors_weighted draws without replacement with renormalization, so the first",
+      "class in a set is drawn with probability exactly proportional to the weights but the",
+      "per-class inclusion probability for a set of size k > 1 is not. Its own docstring states",
+      "this and states that no without-replacement scheme can make inclusion exactly",
+      "proportional while drawing exactly k distinct classes. What the null preserves is the",
+      "ordering: heavier classes are included more often.",
+      "",
+      "This bounds the conclusion and the bound is written here rather than discovered in a",
+      "review. A verdict from this control is a statement about an ordering-matched frequency",
+      "null, not an exactly frequency-matched one. If the overlap survives, the correct claim is",
+      "that it is not explained by the founder's class-frequency ordering. A control needing",
+      "exact inclusion probabilities needs a different sampler and is not this one."
+    ],
+    "gates": {
+      "A": {
+        "metric": "mean pairwise Jaccard over Arm A's twenty survivor sets, the statistic the published 2.12x figure is computed from",
+        "condition": "the observed same-founder overlap is not above a frequency-matched null",
+        "fails_if": "one-sided resampling p < 0.05 for the observed mean pairwise Jaccard exceeding the frequency-matched null, over 10000 draws",
+        "meaning_if_failed": "the same-founder overlap is not explained by the founder's class-frequency ordering, so founder identity adds something beyond the founder's output distribution; the qualification added to README.md and PROJECT.md on 2026-10-20 is lifted and the 2.12x result is reported as having survived C-4S's challenge",
+        "meaning_if_passed": "the same-founder overlap is within what the founder's class-frequency ordering alone produces; the founder-identity claim is withdrawn as such, restated as a class-frequency claim, and PROJECT.md's strongest claim is withdrawn with it"
+      },
+      "B": {
+        "metric": "mean pairwise overlap coefficient over the same twenty survivor sets, against the same frequency-matched null",
+        "condition": "the observed same-founder overlap is not above a frequency-matched null when measured by a size-insensitive statistic",
+        "fails_if": "one-sided resampling p < 0.05 for the observed mean pairwise overlap coefficient exceeding the frequency-matched null, over 10000 draws",
+        "meaning_if_failed": "the same consequence as gate A, and additionally that the result does not depend on Jaccard's sensitivity to set size, which RESEARCH-PLAN.md section 4.3 item 4 raises as a defect because survivor-set sizes differ systematically across arms",
+        "meaning_if_passed": "the overlap is within the frequency-matched null on the size-insensitive statistic; if gate A fails while this one passes, the gate A result is attributable to set-size differences rather than to shared class membership and must be reported as such"
+      }
+    },
+    "headroom": [
+      "Reported in the log beside every p-value: the observed statistic, the frequency-matched",
+      "null's mean, standard deviation and range, the size-conditioned uniform null's mean for",
+      "comparison, and the number of distinct survivor-set assignments the weighting leaves",
+      "available. null_headroom is called on every null and its output is logged.",
+      "",
+      "A gate is declared NOT EVALUABLE, and no verdict is taken from it, if any of three floors",
+      "is breached.",
+      "",
+      "1. Null standard deviation below 0.004. Derivation: the observed statistic's own 95%",
+      "interval is [0.152, 0.236], a half-width of 0.042, which is the spread the data itself",
+      "exhibits across chains. A null narrower than a tenth of that cannot represent the",
+      "sampling variability the measurement already shows, and a p-value from it would be a",
+      "statement about a point mass. The floor is read off the data's own interval, not chosen.",
+      "",
+      "2. Fewer than 1000 distinct survivor-set assignments achievable under the weighting.",
+      "Carried over from C-4F unchanged. A weighting concentrated on a handful of classes leaves",
+      "a null that is nearly deterministic, which is C-4's gate B failure in another coordinate",
+      "system.",
+      "",
+      "3. The frequency-matched null's mean within one of its own standard deviations of the",
+      "size-conditioned uniform null's mean. This floor is specific to this control and is the",
+      "one most likely to fire. If weighting by founder frequency does not move the null, then",
+      "this control is the uniform null wearing a different name, and a verdict from it would be",
+      "reported as a test of frequency matching while testing nothing of the kind. The founder's",
+      "frequencies are known to be non-uniform - its fifty classes fall into five strata holding",
+      "444, 674, 828, 977 and 1173 of the 4096 probe points, a 2.6x spread from rarest decile to",
+      "commonest - but that is measured on the probe pool and this control weights on the",
+      "training pool, so the separation is checked and not assumed."
+    ],
+    "combination": [
+      "Both gates evaluable: the control PASSES only if both pass, and FAILS if either fails.",
+      "Exactly one gate evaluable: the verdict is PARTIAL, carrying that gate's consequence and",
+      "no more, and naming which gate carried it. Neither evaluable: NOT EVALUABLE, and the",
+      "qualification on README.md and PROJECT.md stays in place, because a control that could",
+      "not be read removes nothing.",
+      "",
+      "The asymmetry in gate B's meaning_if_passed is deliberate: gate A failing while gate B",
+      "passes is not a partial success but a specific finding about set size, and must be",
+      "reported as that rather than as a weaker version of gate A."
+    ],
+    "sanity_check": [
+      "The founder rebuilt here must reproduce the memorization accuracy both",
+      "logs/seed_stability_n20.json and logs/c4_timing.json record, 0.977294921875, exactly.",
+      "",
+      "Arm A must carry twenty runs at founder_seed 0 and chain seeds 100 to 119; a log with",
+      "different seeds is not the run whose null this control replaces.",
+      "",
+      "The observed mean pairwise Jaccard recomputed here must reproduce the 0.193 that",
+      "analysis/seed_stability_stats.py reports from the same log, and the size-conditioned",
+      "uniform null mean must reproduce its 0.091, to three decimal places. If the statistic",
+      "cannot be reproduced, the frequency-matched null is being compared against a different",
+      "quantity than the published figure and no verdict is taken.",
+      "",
+      "logs/seed_stability_n20.json is read and never rewritten."
+    ],
+    "verdict_if_failed": [
+      "The same-founder survivor-set overlap is not explained by the founder's class-frequency",
+      "ordering. Founder identity adds something beyond the founder's output distribution, the",
+      "2026-10-20 qualification on README.md and PROJECT.md is lifted, and the claim is restated",
+      "as having survived the challenge C-4S raised rather than as never having faced it.",
+      "C-4S's gate A result stands unchanged: founder frequency still predicts survival time, it",
+      "just does not account for where a chain ends up."
+    ],
+    "verdict_if_passed": [
+      "The same-founder overlap is within what the founder's class-frequency ordering alone",
+      "produces. The founder-identity claim is withdrawn as such and restated as a class-frequency",
+      "claim; PROJECT.md's strongest claim, that the founder's identity survives in the code long",
+      "after it is gone from the function, is withdrawn with it. The surviving statement is that",
+      "chains from one founder inherit its class frequencies and that frequent classes survive,",
+      "which is C-4S's gate A result and is already established. The seed-stability experiment",
+      "then measures a consequence of frequency rather than a founder effect, and the",
+      "cross-arm permutation result must be reread in that light."
     ]
   }
 }
