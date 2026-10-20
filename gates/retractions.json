@@ -21,7 +21,6 @@
     "inconvenient. Removing one is a visible diff, which is the same protection the commit",
     "ordering buys for gates/thresholds.json."
   ],
-
   "deliverables": [
     "README.md",
     "PROJECT.md",
@@ -33,9 +32,10 @@
     "video-script.md",
     "ARTIFACTS.md"
   ],
-
   "frozen_deliverables": {
-    "files": ["progress-report-1.md"],
+    "files": [
+      "progress-report-1.md"
+    ],
     "reason": [
       "A dated coursework artifact that was submitted on 2026-09-14, before the n = 20 rerun",
       "and before control C-6. It is a historical record of what was believed at the time and",
@@ -43,7 +43,6 @@
       "concern citations still apply, because a citation was either verified or it was not."
     ]
   },
-
   "retraction_markers": [
     "unverified",
     "not been read",
@@ -55,7 +54,6 @@
     "must not be presented",
     "check the"
   ],
-
   "supersede_markers": [
     "superseded",
     "withdrawn",
@@ -74,7 +72,6 @@
     "not the current",
     "~~"
   ],
-
   "heldout_markers": [
     "held-out",
     "held out",
@@ -84,29 +81,41 @@
     "inputs it did not train on",
     "generalization metric"
   ],
-
   "banned_citations": [
     {
       "id": "arXiv:2601.13100",
       "reason": "Unrefereed preprint containing no empirical work. Known to be real but unsuitable as authority.",
       "recorded_in": "CLAUDE.md",
-      "exempt": ["CLAUDE.md", "PROJECT.md", "gates/retractions.json"]
+      "exempt": [
+        "CLAUDE.md",
+        "PROJECT.md",
+        "gates/retractions.json"
+      ]
     },
     {
       "id": "arXiv:2608.08572",
       "reason": "Unrefereed preprint. Known to be real but unsuitable as authority.",
       "recorded_in": "CLAUDE.md",
-      "exempt": ["CLAUDE.md", "PROJECT.md", "gates/retractions.json"]
+      "exempt": [
+        "CLAUDE.md",
+        "PROJECT.md",
+        "gates/retractions.json"
+      ]
     }
   ],
-
   "retracted_attributions": [
     {
       "name": "davari-random-label-arm",
       "retracted": "2026-09-22",
       "recorded_in": "PROJECT.md",
-      "patterns": ["random-label arm", "random label arm"],
-      "exempt": ["PROJECT.md", "gates/retractions.json"],
+      "patterns": [
+        "random-label arm",
+        "random label arm"
+      ],
+      "exempt": [
+        "PROJECT.md",
+        "gates/retractions.json"
+      ],
       "reason": [
         "An earlier entry credited Davari et al. (arXiv:2210.16156) with a random-label",
         "memorization arm and linear-probe accuracies of roughly 70% versus 10%. The abstract",
@@ -119,15 +128,52 @@
       "name": "davari-venue-iclr-2023",
       "retracted": "2026-09-22",
       "recorded_in": "PROJECT.md",
-      "patterns": ["ICLR 2023", "International Conference on Learning Representations (ICLR 2023)"],
-      "exempt": ["PROJECT.md", "gates/retractions.json"],
+      "patterns": [
+        "ICLR 2023",
+        "International Conference on Learning Representations (ICLR 2023)"
+      ],
+      "exempt": [
+        "PROJECT.md",
+        "gates/retractions.json"
+      ],
       "reason": [
         "The venue was asserted without checking and has been dropped pending verification.",
         "Cite the arXiv identifier until the venue is confirmed."
       ]
+    },
+    {
+      "name": "founder-identity-beyond-frequency",
+      "retracted": "2026-10-20",
+      "recorded_in": "PROJECT.md",
+      "patterns": [
+        "2.12x the overlap expected by chance",
+        "2.12x chance"
+      ],
+      "exempt": [
+        "gates/retractions.json"
+      ],
+      "reason": [
+        "Control C-4S ran on 2026-10-20 under a rule committed 2026-10-15 and failed both",
+        "gates. Founder generation-0 predicted class frequency alone correlates with death",
+        "generation at 0.4721 over 10000 within-chain permutations, p = 1e-4, which is a",
+        "larger correlation than the 0.3625 transmitted-count effect C-4T rests on. The",
+        "committed consequence is explicit: the surviving-alphabet overlap cannot be",
+        "attributed to founder identity beyond frequency without a frequency-matched",
+        "overlap null, and that null becomes a prerequisite for any further statement about",
+        "founder identity rather than an improvement to the statistics.",
+        "",
+        "The 2.12x same-founder overlap ratio is not withdrawn and the n = 20 measurement",
+        "stands. What is withdrawn is reading it as evidence of founder identity without",
+        "saying what it adds over founder class frequency. Either phrasing of the claim may",
+        "be restored once analysis/overlap_stats.py's frequency_matched_null has been run on",
+        "logs/seed_stability_n20.json, which needs no new training and is already written.",
+        "",
+        "The patterns here match the two sites where the ratio is asserted as a",
+        "founder-identity result and deliberately not the paragraphs that record its",
+        "correction history, where stating the number is the point."
+      ]
     }
   ],
-
   "superseded_values": [
     {
       "value": "2.94",
@@ -165,12 +211,15 @@
       "reason": "Generation-20 training-pool agreement under argmax transmission. The held-out generation-25 value is 0.167, a gap of 0.487, and the gap at generation 1 is 0.753. Argmax preserves the founder's memorized lookup table on memorized points, not its function."
     }
   ],
-
   "pool_scoped_fields": [
     {
       "field": "cka_prev",
-      "measured_on": ["training pool"],
-      "not_measured_on": ["held-out probe pool"],
+      "measured_on": [
+        "training pool"
+      ],
+      "not_measured_on": [
+        "held-out probe pool"
+      ],
       "verify_absent_from": "logs/c6_probe_pool.json",
       "evidence": [
         "cka_prev is written only by spike_iterated_distill.py and appears only in the six",
@@ -184,7 +233,10 @@
         "CKA vs prev",
         "CKA between consecutive"
       ],
-      "training_pool_only_values": ["0.959", "0.950"],
+      "training_pool_only_values": [
+        "0.959",
+        "0.950"
+      ],
       "reason": [
         "Pairing a consecutive-generation CKA with a held-out agreement figure presents two",
         "measurements from different pools as one observation. The CKA figure that is unaffected",
@@ -193,7 +245,6 @@
       ]
     }
   ],
-
   "baseline_scoped_ratios": {
     "source_log": "logs/seed_stability_n20.txt",
     "reason": [
