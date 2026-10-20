@@ -212,7 +212,19 @@ def check_pool_splice(ledger):
 
         triggers = list(spec["prose_aliases"]) + list(spec["training_pool_only_values"])
 
+        # Frozen deliverables are submitted, dated artifacts and are not
+        # retroactively corrected, which is the ledger's stated reason for the
+        # same exemption in check_superseded_values. A pool splice is a
+        # measurement belief held at submission time, so it falls under that
+        # rule; a citation does not, which is why the citation checks still
+        # apply to frozen files. Honouring the exemption here was missing, and
+        # the gap only became visible when midterm-report.md was added to the
+        # deliverables list on 2026-10-20.
+        frozen = set(ledger["frozen_deliverables"]["files"])
+
         for relpath in ledger["deliverables"]:
+            if relpath in frozen:
+                continue
             text = read(relpath)
             if text is None:
                 continue

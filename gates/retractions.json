@@ -26,21 +26,30 @@
     "PROJECT.md",
     "CLAUDE.md",
     "RESEARCH-PLAN.md",
-    "csci-proposal-draft.md",
-    "csci-proposal-FINAL.md",
     "progress-report-1.md",
-    "video-script.md",
-    "ARTIFACTS.md"
+    "ARTIFACTS.md",
+    "progress-report-2.md",
+    "progress-report-3.md",
+    "midterm-report.md"
   ],
   "frozen_deliverables": {
     "files": [
-      "progress-report-1.md"
+      "progress-report-1.md",
+      "progress-report-2.md",
+      "midterm-report.md"
     ],
     "reason": [
-      "A dated coursework artifact that was submitted on 2026-09-14, before the n = 20 rerun",
-      "and before control C-6. It is a historical record of what was believed at the time and",
-      "is not retroactively corrected, so the superseded-value check skips it. Checks that",
-      "concern citations still apply, because a citation was either verified or it was not."
+      "Dated coursework artifacts, each submitted before later corrections landed.",
+      "progress-report-1.md was submitted 2026-09-14, progress-report-2.md 2026-09-29 and",
+      "midterm-report.md 2026-10-06. They are historical records of what was believed at the",
+      "time and are not retroactively corrected, so the superseded-value check skips them.",
+      "Checks that concern citations still apply, because a citation was either verified or it",
+      "was not. progress-report-3.md is deliberately NOT frozen: it is the current deliverable",
+      "and every check applies to it.",
+      "",
+      "The two proposal drafts and video-script.md were removed from the deliverables list",
+      "because the files no longer exist; a check that cannot find its target reports nothing",
+      "and quietly stops being a check."
     ]
   },
   "retraction_markers": [
