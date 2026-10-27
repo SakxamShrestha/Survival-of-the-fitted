@@ -1150,7 +1150,79 @@
       "project's only positive finding if it holds. Three things must be reported with it and not",
       "after it: the inertness margin, the MC-dropout comparison, and gate C's verdict, since",
       "without C the claim is 'the founder was forgotten' and not 'the prior was found'."
-    ]
+    ],
+    "categorical_sampler_amendment": {
+      "added": "2026-10-27, before any S-1 sampler code exists. An addition that fixes the categorical draw objective the entry left unstated; it changes no gate, threshold, grid or order.",
+      "why": [
+        "precondition_sampler_exactness certifies randomize-then-optimize, which is exact only for a Gaussian",
+        "likelihood. This arm transmits sampled hard labels, a categorical likelihood, and neither this entry",
+        "nor RESEARCH-PLAN.md said what 'perturb the targets' means for a class label. Writing the draw",
+        "objective after seeing a result would be the forking path section 7 forbids, so it is fixed here."
+      ],
+      "method": [
+        "Per generation, two passes on the transmitted batch (x_i, y_i), i = 1..B, B = 128.",
+        "(1) MAP pass: minimise lambda * sum_i CE(f(x_i; w), y_i) + sum_l ||w_l||^2 / (2 sigma_l^2), full batch,",
+        "sum reduction, optimizer weight_decay = 0. Record f_hat_i and p_hat_i = softmax(f_hat_i).",
+        "(2) Draw pass: draw theta0_l ~ N(0, sigma_l^2 I) for every parameter tensor and xi_i ~ N(0, I_K);",
+        "initialise at theta0 and minimise",
+        "lambda * sum_i [ 1/2 (f_i - f_hat_i)^T B_i (f_i - f_hat_i) + (p_hat_i - y_i)^T (f_i - f_hat_i) ]",
+        "  - sqrt(lambda) * sum_i xi_i^T B_i^{1/2} f_i + sum_l ||w_l - theta0_l||^2 / (2 sigma_l^2),",
+        "with B_i = diag(p_hat_i) - p_hat_i p_hat_i^T. The network stays nonlinear; only the likelihood is",
+        "replaced by its generalized Gauss-Newton (GGN) quadratic in logit space around the MAP. The trained",
+        "student is the weight draw and is the next generation's teacher.",
+        "Bias parameters take the prior sd of their own layer's weights. sigma_match lists weights only, so",
+        "this closes a gap rather than choosing a value.",
+        "In the Gaussian case, B_i = I / s^2, the draw objective is algebraically randomize-then-optimize",
+        "with targets y + s * xi / sqrt(lambda), so the SAME draw function must be the one run through",
+        "precondition_sampler_exactness.",
+        "Excluded: cross-entropy against perturbed soft targets onehot + B^{1/2} xi / sqrt(lambda). It is",
+        "unbounded below for a ReLU network and diverged at every lambda at 4 x sigma_match in a scratch",
+        "probe on 2026-10-27."
+      ],
+      "citations_verified_2026_10_27": [
+        "Antoran, Padhy, Barbano, Nalisnick, Janz & Hernandez-Lobato, 'Sampling-based inference for large linear",
+        "models, with application to linearised Laplace', arXiv:2210.04994 (ICLR 2023 per the arXiv comment,",
+        "proceedings not checked): sample-then-optimise is exact for the conjugate Gaussian linear model, with",
+        "B_i evaluated at the network's predictions f(w_bar, x_i).",
+        "Immer, Korzepa & Bauer, arXiv:2008.08400 (AISTATS 2021 per the arXiv comment): the GGN approximation is",
+        "a local linearization of the network that turns it into a generalized linear model.",
+        "Bardsley, Solonen, Haario & Laine 2014, DOI 10.1137/140964023, already cited above.",
+        "Not cited, unverified: Matthews, Hron, Turner & Ghahramani 2017 (no resolvable identifier found)."
+      ],
+      "what_the_linear_gaussian_precondition_certifies": [
+        "Anchor scaling, lambda placement, the per-layer prior form, sum reduction and inner-optimiser",
+        "convergence on a convex problem. It does NOT certify the B^{1/2} computation, softmax curvature,",
+        "MAP convergence, or anything about the nonlinear network. That is why the next precondition exists."
+      ],
+      "precondition_categorical_ggn_exactness": [
+        "Read after precondition_sampler_exactness and before inertness. On C-8's frozen body for pool seed 0",
+        "(features augmented with a constant column), with C-8's generation-1 hard-label transmitted batch",
+        "and sigma = 0.0361, at each lambda in {1, 10, 100}, the same draw function restricted to the head",
+        "must reproduce the closed-form tempered GGN-Laplace posterior given by",
+        "analysis/laplace_glm.fit_laplace with prior precision alpha / lambda, covariance H^-1 / lambda.",
+        "Compared along 200 fixed directions (100 random unit vectors, 100 leading Hessian eigenvectors)",
+        "using 2000 draws: every directional variance ratio within 1 +/- 0.10 and the mean within 5 standard",
+        "errors in every direction. Derivation: the relative standard error of a variance estimate at 2000",
+        "draws is sqrt(2/2000), about 3.2 percent, so 0.10 is about three standard errors; the 5 standard",
+        "errors on the mean carries over from precondition_sampler_exactness. Any failure: BROKEN, no gate is",
+        "read, and no statement is made about whether the sampler/maximizer distinction transfers."
+      ],
+      "does_not_certify": [
+        "Exactness for the full network. The full-network draw targets a MAP-centred GGN-Laplace posterior in",
+        "logit space, not p(D|w)^lambda p(w). Every verdict from this arm is stated as holding 'under a",
+        "MAP-centred GGN posterior sampler', and is reported beside the MAP-to-MAP spread across MAP seeds,",
+        "the draw-to-draw spread at a fixed MAP, and draw versus MAP logit norm."
+      ],
+      "forecast_recorded_before_the_run": [
+        "A single-batch scratch probe on 2026-10-27 (one founder, one batch; not in logs/, unverified) found",
+        "that at sigma_match with lambda 1 or 10 the MAP is near-uniform over 50 classes (mean max-probability",
+        "0.020 to 0.021), and that at lambda = 100 draw-versus-MAP argmax agreement was 0.086. If that holds,",
+        "headroom floor 1 will refuse gate A at sigma_match and the lambda = 100 sanity check may fail there.",
+        "The sigma grid is NOT changed in response: it was fixed by derivation, and moving it after a probe is",
+        "the threshold move this file exists to prevent. The forecast is written here so that a refusal at",
+        "sigma_match is read as the predicted consequence of a strong prior, not as a surprise."
+      ]
+    }
   },
   "C-8": {
     "name": "Frozen-body / random-features null",
@@ -1388,6 +1460,87 @@
       "say that no representational change is required to produce it. This is the outcome that costs",
       "the most, and it is recorded here before the run so that it cannot later be presented as a",
       "neutral finding."
+    ],
+    "final_status_2026_10_27": [
+      "Gate A is recorded NOT EVALUABLE and is closed. It is not amended and will not be rerun. The",
+      "founder-comparability precondition refused it as predicted (logs/c8_frozen_body.txt: 0 of 20",
+      "frozen-body founders inside C-1's range). Its readable successor is the separate entry C-8b.",
+      "The tolerance stands as recorded, informative at generation 1 only (floor 3)."
+    ]
+  },
+  "C-8b": {
+    "name": "Frozen random-body learner from a shared, trained founder",
+    "committed": "2026-10-27",
+    "question": "Given an identical founder, does a learner whose representation cannot change contract the alphabet as far as the full MLP does?",
+    "background": [
+      "C-8 gate A is NOT EVALUABLE because its frozen-body founders reached 0.108 to 0.126 accuracy against",
+      "C-1's 0.977 to 0.984, so the founder and the learner changed together. Two repairs were probed in",
+      "scratch on 2026-10-27 and rejected (not in logs/, unverified). Widening the random body reaches C-1's",
+      "accuracy only near h = 8192 and its founder is far softer (entropy 2.08 against 0.24 nats), so",
+      "accuracy matching does not match the transmitted targets. Training the full MLP down to 0.11 needs",
+      "per-seed step tuning, a forking path. C-8b instead holds the founder fixed by identity: generation 0",
+      "is C-1's own founder for each pool seed, and only the students differ.",
+      "DISCLOSED: chain seeds 600, 601 and 602 were run in that scratch spike before this entry was",
+      "committed (frozen-arm generation-25 alphabets 1, 1, 2). They cannot be replaced, because the arm must",
+      "share C-1's pools and chain seeds. They are therefore run and reported, but EXCLUDED from the gate:",
+      "the verdict is read on the 17 unseen chains, 603 to 619, against C-1's own 17 chains on the same",
+      "seeds, recomputed from logs/c1_shuffled_n20.json."
+    ],
+    "fixed_in_advance": {
+      "n_chains_run": 20,
+      "n_chains_gated": 17,
+      "gated_chain_seeds": "603-619",
+      "disclosed_seen_chain_seeds": "600-602",
+      "gens": 25,
+      "bottleneck": 128,
+      "tau": 1.0,
+      "transmission": "soft logits, as C-1's intact arm",
+      "pool_seeds": "C-1's pool seed for each chain, read from logs/c1_shuffled_n20.json",
+      "founder": "C-1's recipe exactly: torch.manual_seed(seed), make_pool(seed, noise), full MLP, 3000 steps",
+      "students": "head reinitialised and retrained each generation on ONE frozen random body per chain, as C-8's runner does it",
+      "comparison_arm": "C-1 intact, restricted to the same 17 chain seeds, recomputed from logs/c1_shuffled_n20.json with C-1's own bootstrap",
+      "gate_pool": "training pool",
+      "descriptive_companion": "the same chains with the FOUNDER's own body frozen after generation 0; reported, never gated"
+    },
+    "precondition_founder_identity": [
+      "Every founder's memorisation accuracy must equal the founder accuracy logged for that seed in",
+      "logs/c1_shuffled_n20.json, by float equality. Any mismatch means the harness has drifted from C-1,",
+      "and gate A is NOT EVALUABLE."
+    ],
+    "gates": {
+      "A": {
+        "metric": "mean surviving alphabet at generation 25 on the training pool over the 17 gated chains, 95 percent bootstrap interval computed as C-1 computes its own",
+        "comparison": "C-1 intact over the same 17 chain seeds, same bootstrap",
+        "outcomes": {
+          "deeper": "frozen interval entirely below the intact interval: a fixed random readout suffices and contracts further, so learning the body slows contraction",
+          "shallower": "frozen interval entirely above: the body carries part of the contraction, and effective rank stays central to the account",
+          "overlap": "freezing the representation does not change contraction resolvably at n = 17; contraction is reproduced by a readout alone"
+        },
+        "derivation": "Two-sided interval overlap against the comparison arm's own interval, no free constant. Two-sided because C-8's one-sided meanings assumed a direction that the disclosed spike contradicts."
+      }
+    },
+    "headroom": [
+      "1. Saturation at generation 1: gate A is NOT EVALUABLE if the frozen arm's generation-1 interval",
+      "already overlaps the comparison arm's generation-25 interval (C-8 floor 1, carried over).",
+      "2. Shuffled floor: if the frozen arm's interval overlaps C-1's shuffled-arm interval, only 'deeper'",
+      "may be stated, worded as 'to the floor'; depth beyond it is not read. Mean alphabet over generations",
+      "1 to 25 is reported beside it.",
+      "3. Fidelity covariate, not gated: generation-1 predicted-class agreement with the founder for both",
+      "arms, intervals over chains. The intact arm is recomputed for generation 1 only, and its generation-1",
+      "alphabets must equal C-1's logged sizes, or that recomputation is discarded. Any 'deeper' statement",
+      "quotes both agreements beside it, because a frozen learner that copies worse would also contract",
+      "faster for that reason alone."
+    ],
+    "sanity_check": [
+      "Features bitwise identical across generations within a chain; the frozen body's state_dict unchanged",
+      "after every generation; logs/c1_shuffled_n20.json read and never written. The log declares",
+      "control = 'C-8b' at top level so ci/check_gate_ordering.py can match it."
+    ],
+    "verdict_if_failed": [
+      "The arm reads 'deeper' or 'shallower' as registered above; neither is a failure of the experiment."
+    ],
+    "verdict_if_passed": [
+      "Overlap: contraction does not depend resolvably on whether the representation can change, at n = 17."
     ]
   }
 }
