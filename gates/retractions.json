@@ -181,9 +181,65 @@
         "founder-identity result and deliberately not the paragraphs that record its",
         "correction history, where stating the number is the point."
       ]
+    },
+    {
+      "name": "c8-tolerance-data-free-directions",
+      "retracted": "2026-10-20",
+      "recorded_in": "controls/c8_frozen_body.py",
+      "patterns": [
+        "0.016113",
+        "data-free directions"
+      ],
+      "exempt": [
+        "gates/retractions.json"
+      ],
+      "reason": [
+        "Entered 2026-10-23. The retraction itself was made on 2026-10-20 at commit 3495920 and",
+        "until now existed only in that commit message and in the runner's docstring, with no",
+        "ledger entry. The founder-identity retraction made the same day got a full entry and this",
+        "one did not. That asymmetry is the failure this file's own README describes - a correction",
+        "that lands in one file does not propagate to the others - so it is recorded here before a",
+        "deliverable repeats it rather than after.",
+        "",
+        "What was retracted. A commit at da82099 reported the Laplace-versus-SGD predicted-class",
+        "disagreement as 0.016113 and diagnosed the cause as data-free directions in the posterior.",
+        "Both are wrong. The 0.016113 was read at generation 5, where only 6 of 50 classes appear in",
+        "the transmitted batch, which is C-4 gate B's failure shape: a statistic read where the",
+        "problem has already collapsed. The MAP's out-of-span fraction was then measured at",
+        "1.99e-15, so the posterior mean already lives in the data span and data-free directions are",
+        "not the cause; projecting SGD onto the span moves the disagreement by +0.0015 while",
+        "changing SGD's own predictions on 9.9 percent of points.",
+        "",
+        "What replaced it, measured 2026-10-23 and logged. The fault was two defects in",
+        "controls/c8_frozen_body.py, both now fixed: the SGD side minimized AdamW's decoupled decay",
+        "rather than the posterior's objective, leaving SGD 3576 nats above the MAP, and the head",
+        "carried a bias the no-intercept GLM never fitted. With both fixed the generation-1",
+        "disagreement is 0.140625 against a seed-spread interval of [0.136609, 0.190407] at 40 of 50",
+        "classes present, inside the tolerance (logs/c8_tolerance.json). The unfixed value at",
+        "generation 1 is 0.487549, which reproduces the retraction's own '0.4875 at 1500 steps' to",
+        "six digits.",
+        "",
+        "One disagreement is left standing rather than resolved, per CLAUDE.md's rule that two",
+        "sources which disagree are reported side by side. The 2026-10-20 correction records the",
+        "generation-1 figure as 0.498291; the 2026-10-23 reproduction of the same unfixed quantity",
+        "gives 0.487549. Which pool or seed produced the former is not established, so both are",
+        "stated and neither is presented as the current value - the current value is 0.140625, which",
+        "is a different quantity because the code it measures has been fixed.",
+        "",
+        "The patterns match the retracted figure and the retracted causal claim. The analytic module",
+        "is NOT retracted: analysis/laplace_glm.py reproduces its own MAP under LBFGS to 2.40e-06 in",
+        "weights and 0.000000 in predictions, so nothing here is a reason to doubt it."
+      ]
     }
   ],
   "superseded_values": [
+    {
+      "value": "11.3",
+      "replaced_by": "7.50",
+      "superseded": "2026-09-29",
+      "recorded_in": "PROJECT.md",
+      "reason": "Mean surviving alphabet for C-1's intact arm from three seeds per arm, reported 2026-09-14 against 1.3 for the shuffled arm and described as roughly a factor of nine. The n = 20 rerun (logs/c1_shuffled_n20.json, chain seeds 600 to 619) gives 7.50 with a 95 percent interval of [5.65, 9.25] intact against 1.45 [1.20, 1.70] shuffled, a ratio of 5.17x. Entered 2026-10-23: C-1's own verdict_if_passed in gates/thresholds.json instructs recording the n = 3 figure as superseded the same way 2.94x was, and that instruction had not been carried out, so check 4 was not guarding it. Only 11.3 is listed and not 1.3, because number_pattern('1.3') also matches section references such as section 1.3, the 1.3 hours runtime estimate, and the prior sd 1.3 in the sampler exactness check. Both deliverables that state the superseded pair state it as 11.3 against 1.3, so guarding 11.3 catches any restatement of either number."
+    },
     {
       "value": "2.94",
       "replaced_by": "2.12",

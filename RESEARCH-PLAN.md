@@ -306,7 +306,7 @@ correct experiment is sampled hard labels **and** posterior-sampled weights.
 
 | method | genuine posterior sampler? | cost vs SGD | rough LoC | role |
 |---|---|---|---|---|
-| anchored / randomized-MAP, K = 1 | yes; exact in the linear-Gaussian case | **1.0x** | ~5 | primary |
+| anchored / randomized-MAP, K = 1 | yes, provided the targets are perturbed too; exact in the linear-Gaussian case | **1.0x** | ~5 | primary |
 | cyclical SG-MCMC | yes; designed for multimodal posteriors | 2–4x | ~30 | second arm |
 | preconditioned SGLD | yes, biased | ~1.0x | ~25 | fallback |
 | SGHMC | yes, biased | ~1.0x | ~15 | better default than plain SGLD |
@@ -316,16 +316,65 @@ correct experiment is sampled hard labels **and** posterior-sampled weights.
 | MC dropout | **no** — fixed mask distribution around one point | 1.0x | ~3 | **negative control** |
 | full-batch HMC | gold standard | 20–100x | ~60 | one calibration point only |
 
-**Primary method: anchored ensembling at K = 1 per generation.** Draw w_anchor ~ N(0, σ²I)
-at the start of each generation, then minimize NLL + ‖w − w_anchor‖² / (2σ²). It is a
-principled weight-space posterior sampler with a stated exactness condition (exact in the
-linear-Gaussian case; approximate otherwise, with a published and honestly characterized
-failure mode — correctly centered, marginal variance underestimated). It costs nothing
-extra, it is about five lines against the existing `train()`, and there is no ambiguity
-about what gets transmitted because the trained student *is* the weight sample. Key
-citations: Pearce, Leibfried, Brintrup, Zaki & Neely (AISTATS 2020, arXiv:1810.05546 — note
-the five-author list, it is commonly miscited as three); exactness result Bardsley, Solonen,
-Haario & Laine (*SIAM J. Sci. Comput.* 36(4):A1895–A1910, 2014, DOI 10.1137/140964023).
+**Primary method: anchored ensembling at K = 1 per generation, in its randomize-then-optimize
+form.** At the start of each generation draw an anchor w_anchor ~ N(0, σ²I) *and* draw a fresh
+perturbation of the transmitted targets from the likelihood's own noise model, then minimize
+the perturbed NLL + ‖w − w_anchor‖² / (2σ²). Both randomizations are required. The anchor
+alone is not a posterior sampler; it is the randomize-then-optimize construction, which
+randomizes the data as well as the prior term before optimizing, that carries the exactness
+result. It costs nothing extra, it is a handful of lines against the existing `train()`, and
+there is no ambiguity about what gets transmitted because the trained student *is* the weight
+sample. Two citations, and they support two different claims that must not be merged. The
+anchored-ensembling construction and its *approximate* status in neural networks are Pearce,
+Leibfried, Brintrup, Zaki & Neely, "Uncertainty in Neural Networks: Approximately Bayesian
+Ensembling" (AISTATS 2020, arXiv:1810.05546 — note the five-author list, it is commonly
+miscited as three); that paper's own analysis is what reports a recovered posterior "centred
+correctly but tends to have an underestimated marginal variance, and overestimated
+correlation", and it names two conditions under which recovery is exact rather than claiming
+exactness in general. The exactness result for the randomize-then-optimize form is Bardsley,
+Solonen, Haario & Laine, "Randomize-Then-Optimize: A Method for Sampling from Posterior
+Distributions in Nonlinear Inverse Problems" (*SIAM J. Sci. Comput.* 36(4):A1895–A1910, 2014,
+DOI 10.1137/140964023), whose abstract states that the measurement error and prior are both
+Gaussian, that a candidate sample is computed by solving a *stochastic* optimization problem,
+and that "in the linear case, these samples are directly from the posterior density".
+
+**Correction, 2026-10-23.** The paragraph above previously gave the anchor-only objective —
+draw w_anchor, then minimize NLL + ‖w − w_anchor‖² / (2σ²) with the targets left alone — and
+described it in one sentence as both "exact in the linear-Gaussian case" and "correctly
+centered, marginal variance underestimated". Those cannot both describe one estimator, and
+the formula was the wrong one. The prose was right about the failure mode and wrong to attach
+an exactness claim to it: the two halves of the parenthetical had been taken from two
+different papers, Pearce et al.'s honest characterisation of the anchor-only procedure and
+Bardsley et al.'s exactness theorem for randomize-then-optimize, and were presented as one
+stated condition on one method.
+
+The size of the error is measured rather than asserted, by
+`analysis/anchored_sampler_check.py` against a closed-form linear-Gaussian posterior
+(`logs/anchored_sampler_exactness.txt`, N = 60, D = 8, noise sd 0.5, prior sd 1.3, 20000
+draws per variant, seeds 0, 1 and 2). The anchor-only variant is centred to within 0.07
+standard errors of the posterior mean on every seed, and its marginal standard deviations
+come in at 0.045 to 0.081 of the true posterior's — between twelve and twenty-two times too
+narrow, with a trace ratio of 0.003 to 0.005. Randomize-then-optimize reproduces the same
+posterior to within 0.009 on every marginal standard deviation and 0.005 on the trace. The
+shortfall is algebraic and not a sampling artefact: the anchor-only draws have covariance
+Σ(I/σ²)Σ where Σ is the posterior covariance, which equals Σ only when Σ = σ²I, that is, only
+when there is no data. Its analytic mean marginal standard-deviation ratio falls from 1.0000
+at N = 0 to 0.8258 at N = 8, 0.1381 at N = 16 and 0.0247 at N = 256 at this D, so more draws
+do not recover it and neither does a longer inner optimization.
+
+Why this is recorded here rather than left as an implementation note. The anchor-only variant
+would have survived every check the committed S-1 entry currently contains. It passes the
+inertness precondition, because its draws genuinely do differ — just by a factor of twenty
+too little. It is not MC dropout, so the negative control stays clean. It is correctly centred
+with the prior entering through the anchor, so it would plausibly still produce σ-dependent
+attractors and satisfy gate C. A sampler that narrow would therefore reach a verdict intact,
+and a null result would have read as "the sampler/maximizer distinction does not transfer"
+when the truth was "the sampler was not a sampler" — which is precisely the distinction §7
+requires be fixed in advance and calls worthless to write afterwards. Stated generally:
+inertness, the MC-dropout control and gate C all detect whether draws differ, and none of
+them detects whether they differ by the right amount. The correction does not change the cost
+or the line count in the table above in any material way; the target perturbation is one more
+line. What it changes is whether the arm measures anything.
 
 **Mandatory negative control: MC dropout**, explicitly labelled non-Bayesian. It is
 stochastic but not posterior-approximating — the randomness is a fixed mask distribution
