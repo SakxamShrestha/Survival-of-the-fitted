@@ -80,6 +80,37 @@ tolerance at a bottleneck at least as large as the feature dimension; or train
 the head to convergence, which tests whether SGD finds the MAP and is a
 different question. Each needs a rule change before it runs.
 
+FIXES 2026-10-23. Both defects named in the CORRECTION above are now fixed in
+this file, and both were verified in source before being touched rather than
+taken from the CORRECTION's word.
+
+  1. Verified: spike_iterated_distill.train builds AdamW with
+     weight_decay=wd and computes F.cross_entropy at its default
+     reduction="mean", so the only L2 in the SGD path was AdamW's decoupled
+     decay, applied to the weights outside the adaptive preconditioner and
+     absent from the loss. analysis/laplace_glm.negative_log_posterior is a SUM
+     of per-observation negative log likelihood plus 0.5 * alpha * ||w||^2.
+     Fixed by train_head_posterior below, which minimizes that objective
+     directly: cross-entropy at reduction="sum", rescaled to the full
+     transmitted batch, plus an explicit 0.5 * alpha * ||w||^2 term in the loss,
+     with the optimizer's weight_decay held at zero. matched_weight_decay is
+     left in place, unused, so the superseded approach stays on the record.
+
+  2. Verified: spike_iterated_distill.MLP sets head = nn.Linear(h, d_out),
+     which carries a bias, while laplace_glm.predict_logits computes
+     features @ mean for a (D, K) mean with no intercept. Fixed by
+     augment_features below, which appends a constant column so the GLM's
+     (D + 1, K) weight matrix is exactly the head's [W^T ; b]. Done on the
+     analysis side rather than by dropping the head's bias, because the head's
+     architecture is C-1's and gate A's chain has to stay comparable to it.
+
+A third defect, found while fixing those two and fixed with them: the committed
+rule requires the tolerance at generation 1 AND at generation 25, and the
+CORRECTION above requires the transmitted batch's class count beside each value,
+but this file measured it only on the chain's last generation and reported no
+class count. run_frozen_chain now captures both generations' transmitted batches
+and main reports both with their class counts.
+
 Gate A is EXPECTED TO REFUSE on the founder-comparability precondition. The
 frozen-body founder reaches about 0.1135 on the training pool against the full
 MLP's 0.977294921875; a 256-dimensional random feature space cannot fit 4096
@@ -102,6 +133,7 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -209,8 +241,76 @@ def train_head(model, X, targets, soft, steps=STEPS_GEN, wd=0.0):
                  params=model.head.parameters())
 
 
+def train_head_posterior(model, X, targets, alpha=PRIOR_PRECISION, steps=STEPS_GEN):
+    """Head-only training that minimizes the Laplace posterior's OWN objective.
+
+    This is defect 1's fix and it is used only on the tolerance path, never on
+    gate A's chain, which must keep train()'s published objective to stay
+    comparable to C-1.
+
+    analysis/laplace_glm.negative_log_posterior is
+
+        -sum_i log p(y_i | phi_i, W)  +  0.5 * alpha * ||W||^2
+
+    a SUM over observations with the L2 term inside the objective. train()
+    minimizes MEAN cross-entropy and hands `wd` to AdamW, whose decay is
+    decoupled: it is applied to the weights directly rather than entering the
+    loss, so it is not an L2 term and no coefficient makes it one. Both halves
+    are corrected here. The cross-entropy is taken at reduction="sum" and
+    rescaled by n / len(minibatch) so that each step is an unbiased estimate of
+    the full transmitted batch's sum, and the prior term is written into the
+    loss with the optimizer's weight_decay held at zero.
+
+    The prior penalizes the bias as well as the weight matrix, because
+    augment_features makes the bias the GLM's last weight row and the GLM's
+    prior is isotropic over all of (D + 1) * K.
+
+    Minibatch construction is train()'s, index-for-index, so the only thing that
+    differs from the published path is the objective.
+    """
+    opt = torch.optim.AdamW(model.head.parameters(), lr=1e-3, weight_decay=0.0)
+    n = X.shape[0]
+    model.train()
+    for _ in range(steps):
+        i = torch.randint(0, n, (min(256, n),), device=DEVICE)
+        logits = model(X[i])
+        nll = F.cross_entropy(logits, targets[i], reduction="sum") * (n / i.numel())
+        prior = 0.5 * float(alpha) * (
+            (model.head.weight ** 2).sum() + (model.head.bias ** 2).sum())
+        loss = nll + prior
+        opt.zero_grad(set_to_none=True)
+        loss.backward()
+        opt.step()
+    return model
+
+
+def augment_features(features):
+    """Features with a constant column, so the GLM carries the head's intercept.
+
+    This is defect 2's fix. model.head is nn.Linear(h, K) and computes
+    z @ W^T + b, while analysis/laplace_glm fits a (D, K) mean and predicts
+    features @ mean with no intercept, so without this the GLM and the head are
+    not the same model and the bridge compares two different functions.
+    Appending a column of ones makes the GLM's (D + 1, K) weight matrix exactly
+    [W^T ; b].
+
+    Applied on the analysis side rather than by constructing the head with
+    bias=False, because the head's architecture is C-1's and gate A's chain is
+    compared against that arm.
+    """
+    phi = np.asarray(features, dtype=np.float64)
+    return np.hstack([phi, np.ones((phi.shape[0], 1), dtype=np.float64)])
+
+
 def matched_weight_decay(n_observations, prior_precision=PRIOR_PRECISION):
-    """The decay that puts SGD on the same objective as the Laplace posterior.
+    """SUPERSEDED 2026-10-23 by train_head_posterior; kept unused, not deleted.
+
+    Its reasoning is wrong in the way defect 1 names: AdamW's decay is
+    decoupled, so it is not an L2 term in the loss and no choice of coefficient
+    makes it the posterior's objective. It is left here because it produced the
+    0.016113 and 0.016357 figures that reached a commit message.
+
+    The decay that puts SGD on the same objective as the Laplace posterior.
 
     analysis/laplace_glm.negative_log_posterior is a SUM of per-observation
     negative log likelihood plus 0.5 * alpha * ||w||^2, while train() minimizes
@@ -239,9 +339,21 @@ def build_frozen_founder(pool_seed):
     return model, X, y, n_classes, acc, feats
 
 
-def run_frozen_chain(model, X, n_classes, chain_seed, gens, soft):
+def run_frozen_chain(model, X, n_classes, chain_seed, gens, soft, Xp=None):
     """One frozen-body chain. Returns per-generation alphabet sizes and a record
-    of the last generation's transmitted batch, which the tolerance needs.
+    of the transmitted batches the tolerance needs.
+
+    The captured batches are generation 1 and the last generation, keyed by
+    1-based generation number, because the committed rule asks for the tolerance
+    at generation 1 AND at generation 25. An earlier version of this function
+    returned only the last one, which is why the 0.016113 figure in the
+    CORRECTION was read at a single saturated generation.
+
+    `Xp`, when given, is the held-out probe pool, and the alphabet on it is
+    recorded per generation. The committed rule's fixed_in_advance names a
+    descriptive_pool at probe_seed 9000 that is reported and NOT gated; this
+    file declared PROBE_SEED and then never used it. Forward passes consume no
+    RNG, so adding this measurement leaves the chain bitwise unchanged.
 
     The body object is carried through unchanged; only the head is replaced. The
     features are asserted bitwise identical every generation, which is a
@@ -252,8 +364,8 @@ def run_frozen_chain(model, X, n_classes, chain_seed, gens, soft):
     with torch.no_grad():
         feats0 = model(X, return_feats=True)[1].clone()
 
-    sizes, leaked = [], 0
-    last = None
+    sizes, probe_sizes, leaked = [], [], 0
+    captured = {}
     for g in range(gens):
         with torch.no_grad():
             t_logits = model(X)
@@ -272,9 +384,12 @@ def run_frozen_chain(model, X, n_classes, chain_seed, gens, soft):
             if not torch.equal(feats, feats0):
                 leaked += 1
             sizes.append(int(model(X).argmax(-1).unique().numel()))
-        last = (sel.clone(), Xs.clone(), targets.clone())
+            if Xp is not None:
+                probe_sizes.append(int(model(Xp).argmax(-1).unique().numel()))
+        if g == 0 or g == gens - 1:
+            captured[g + 1] = (sel.clone(), Xs.clone(), targets.clone())
 
-    return sizes, leaked, last, float(effective_rank(feats0))
+    return sizes, leaked, captured, float(effective_rank(feats0)), probe_sizes
 
 
 # ------------------------------------------------------------ tolerance
@@ -298,8 +413,7 @@ def sgd_seed_spread(model, X, Xs, targets, n_pairs, base_seed):
         preds = []
         for which in (0, 1):
             reinit_head(model, base_seed + 2 * i + which)
-            train_head(model, Xs, targets, soft=False,
-                       wd=matched_weight_decay(len(targets)))
+            train_head_posterior(model, Xs, targets)
             with torch.no_grad():
                 preds.append(model(X).argmax(-1).cpu().numpy())
         out.append(disagreement(preds[0], preds[1]))
@@ -311,8 +425,13 @@ def laplace_vs_sgd(model, X, Xs, targets, n_classes, sgd_seed):
     closed-form Laplace posterior mean for the same GLM on the same data.
     """
     with torch.no_grad():
-        feats_batch = model(Xs, return_feats=True)[1].cpu().numpy().astype(np.float64)
-        feats_pool = model(X, return_feats=True)[1].cpu().numpy().astype(np.float64)
+        feats_batch = model(Xs, return_feats=True)[1].cpu().numpy()
+        feats_pool = model(X, return_feats=True)[1].cpu().numpy()
+
+    # The constant column is defect 2's fix: it gives the GLM the intercept
+    # model.head carries, so the two sides of the bridge are the same model.
+    feats_batch = augment_features(feats_batch)
+    feats_pool = augment_features(feats_pool)
 
     posterior = lg.fit_laplace(
         feats_batch, targets.cpu().numpy(), n_classes, prior_precision=PRIOR_PRECISION)
@@ -320,8 +439,7 @@ def laplace_vs_sgd(model, X, Xs, targets, n_classes, sgd_seed):
         return None, posterior
 
     reinit_head(model, sgd_seed)
-    train_head(model, Xs, targets, soft=False,
-               wd=matched_weight_decay(len(targets)))
+    train_head_posterior(model, Xs, targets)
     with torch.no_grad():
         sgd_pred = model(X).argmax(-1).cpu().numpy()
 
@@ -375,11 +493,19 @@ def main():
     print(f"its founders span [{c1_range[0]:.12f}, {c1_range[1]:.12f}] -- the precondition's "
           f"range\n")
 
+    # Held-out probe pool, the rule's descriptive_pool. Reported beside gate A
+    # and carrying no verdict: no n = 20 probe-pool alphabet anchor exists, and
+    # C-4O already paid for comparing one pool's covariate against another
+    # pool's outcome.
+    Xp, _, _ = make_pool(seed=PROBE_SEED, kind="noise")
+    Xp = Xp.to(DEVICE)
+
     chains = []
     for i, pool_seed in enumerate(POOL_SEEDS[:args.chains]):
         model, X, y, n_classes, acc, _ = build_frozen_founder(pool_seed)
-        sizes, leaked, last, eff = run_frozen_chain(
-            model, X, n_classes, CHAIN_SEED_OFFSET + pool_seed, args.gens, soft=True)
+        sizes, leaked, last, eff, probe_sizes = run_frozen_chain(
+            model, X, n_classes, CHAIN_SEED_OFFSET + pool_seed, args.gens,
+            soft=True, Xp=Xp)
         chains.append({
             "pool_seed": int(pool_seed),
             "chain_seed": int(CHAIN_SEED_OFFSET + pool_seed),
@@ -387,11 +513,15 @@ def main():
             "sizes": sizes,
             "final": int(sizes[-1]),
             "gen1": int(sizes[0]),
+            "probe_sizes": probe_sizes,
+            "probe_final": int(probe_sizes[-1]),
+            "probe_gen1": int(probe_sizes[0]),
             "feature_leaks": int(leaked),
             "eff_rank_frozen_feats": eff,
         })
         print(f"  chain {pool_seed:2d}  founder {acc:.6f}  gen1 {sizes[0]:2d}  "
-              f"gen{args.gens} {sizes[-1]:2d}  leaks {leaked}  "
+              f"gen{args.gens} {sizes[-1]:2d}  probe gen{args.gens} "
+              f"{probe_sizes[-1]:2d}  leaks {leaked}  "
               f"eff_rank {eff:.3f}   [{time.time()-t0:5.0f}s]")
 
     finals = [c["final"] for c in chains]
@@ -408,6 +538,14 @@ def main():
           f"95% [{frozen_ci[0]:.2f}, {frozen_ci[1]:.2f}]")
     print(f"  generation 1:  mean {np.mean(gen1s):.2f}, "
           f"95% [{gen1_ci[0]:.2f}, {gen1_ci[1]:.2f}]")
+
+    probe_finals = [c["probe_final"] for c in chains]
+    rng_p = np.random.default_rng(BOOT_SEED)
+    probe_ci = bootstrap_ci_mean(probe_finals, rng_p)
+    print(f"\ndescriptive, NO VERDICT -- held-out probe pool at probe_seed {PROBE_SEED}:")
+    print(f"  generation {args.gens} alphabet: mean {np.mean(probe_finals):.2f}, "
+          f"95% [{probe_ci[0]:.2f}, {probe_ci[1]:.2f}]")
+    print("  not compared against C-1, which has no n = 20 probe-pool anchor")
 
     # ---- precondition, read before gate A
     inside = [c1_range[0] <= a <= c1_range[1] for a in founder_accs]
@@ -441,42 +579,64 @@ def main():
         print(f"\ngate A: intervals {'overlap' if overlap else 'do NOT overlap'} "
               f"-> {gate_a['verdict']}")
 
-    # ---- tolerance, on a hard-label chain
+    # ---- tolerance, on a hard-label chain, at generation 1 and the last
+    # generation. The two are reported separately with their transmitted
+    # batch's class count, because the CORRECTION in this file's docstring
+    # exists for a figure read at one saturated generation.
     print(f"\ntolerance, hard-label transmission  [{time.time()-t0:5.0f}s]")
     model, X, y, n_classes, acc, _ = build_frozen_founder(POOL_SEEDS[0])
-    _, _, last, _ = run_frozen_chain(
+    _, _, captured, _, _ = run_frozen_chain(
         model, X, n_classes, CHAIN_SEED_OFFSET, args.gens, soft=False)
-    _, Xs, targets = last
 
-    spread = sgd_seed_spread(model, X, Xs, targets,
-                             n_pairs=min(args.chains, 20), base_seed=SPREAD_SEED_OFFSET)
-    rng2 = np.random.default_rng(BOOT_SEED)
-    spread_ci = bootstrap_ci_mean(spread, rng2)
-    print(f"  SGD seed-to-seed disagreement, {len(spread)} pairs: "
-          f"mean {np.mean(spread):.6f}, 95% [{spread_ci[0]:.6f}, {spread_ci[1]:.6f}]")
+    tolerance = {}
+    for which, gen in enumerate(sorted(captured)):
+        _, Xs, targets = captured[gen]
+        n_batch_classes = int(targets.unique().numel())
+        print(f"  generation {gen}: {n_batch_classes} of {n_classes} classes in the "
+              f"transmitted batch of {len(targets)}")
 
-    obs, posterior = laplace_vs_sgd(model, X, Xs, targets, n_classes,
-                                    sgd_seed=SPREAD_SEED_OFFSET + 500)
-    if obs is None:
-        tolerance = {"verdict": "NOT EVALUABLE", "observed": None,
-                     "not_evaluable_reason": posterior.reason}
-        print(f"  -> NOT EVALUABLE: {posterior.reason}")
-    else:
-        within = spread_ci[0] <= obs <= spread_ci[1]
-        tolerance = {
-            "verdict": "WITHIN" if within else "OUTSIDE", "observed": obs,
+        # The baseline is measured and printed BEFORE the comparison is read,
+        # which the committed rule requires in those words.
+        spread = sgd_seed_spread(model, X, Xs, targets,
+                                 n_pairs=min(args.chains, 20),
+                                 base_seed=SPREAD_SEED_OFFSET + 1000 * which)
+        rng2 = np.random.default_rng(BOOT_SEED)
+        spread_ci = bootstrap_ci_mean(spread, rng2)
+        print(f"    SGD seed-to-seed disagreement, {len(spread)} pairs: "
+              f"mean {np.mean(spread):.6f}, 95% [{spread_ci[0]:.6f}, {spread_ci[1]:.6f}]")
+
+        obs, posterior = laplace_vs_sgd(model, X, Xs, targets, n_classes,
+                                        sgd_seed=SPREAD_SEED_OFFSET + 1000 * which + 500)
+        entry = {
+            "generation": int(gen),
+            "batch_classes_present": n_batch_classes,
+            "batch_size": int(len(targets)),
             "baseline_mean": float(np.mean(spread)),
             "baseline_ci95": [spread_ci[0], spread_ci[1]],
-            "n_pairs": len(spread), "converged": bool(posterior.converged),
-            "n_iter": int(posterior.n_iter),
-            "prior_only_directions": int(posterior.prior_only_directions),
-            "not_evaluable_reason": None,
+            "n_pairs": len(spread),
+            "sgd_seed_spread": spread,
         }
-        print(f"  Laplace vs SGD disagreement: {obs:.6f}")
-        print(f"  posterior converged={posterior.converged} n_iter={posterior.n_iter} "
-              f"prior_only_directions={posterior.prior_only_directions}")
-        print(f"  -> {tolerance['verdict']} the baseline interval"
-              f"{' : S-1 may proceed' if within else ' : S-1 must NOT proceed'}")
+        if obs is None:
+            entry.update({"verdict": "NOT EVALUABLE", "observed": None,
+                          "not_evaluable_reason": posterior.reason})
+            print(f"    -> NOT EVALUABLE: {posterior.reason}")
+        else:
+            within = spread_ci[0] <= obs <= spread_ci[1]
+            entry.update({
+                "verdict": "WITHIN" if within else "OUTSIDE", "observed": obs,
+                "converged": bool(posterior.converged),
+                "n_iter": int(posterior.n_iter),
+                "data_rank": int(posterior.data_rank),
+                "prior_only_directions": int(posterior.prior_only_directions),
+                "not_evaluable_reason": None,
+            })
+            print(f"    Laplace vs SGD disagreement: {obs:.6f}")
+            print(f"    posterior converged={posterior.converged} "
+                  f"n_iter={posterior.n_iter} data_rank={posterior.data_rank} "
+                  f"prior_only_directions={posterior.prior_only_directions}")
+            print(f"    -> {entry['verdict']} the baseline interval"
+                  f"{' : S-1 may proceed' if within else ' : S-1 must NOT proceed'}")
+        tolerance[f"gen{gen}"] = entry
 
     print(f"\nsanity: feature leaks across all chains and generations: {total_leaks} "
           f"(must be 0)")
@@ -498,10 +658,15 @@ def main():
             },
             "frozen_mean": float(np.mean(finals)), "frozen_ci95": list(frozen_ci),
             "gen1_mean": float(np.mean(gen1s)), "gen1_ci95": list(gen1_ci),
+            "probe_descriptive_no_verdict": {
+                "probe_seed": PROBE_SEED,
+                "final_mean": float(np.mean(probe_finals)),
+                "final_ci95": list(probe_ci),
+                "finals": probe_finals,
+            },
             "c1_intact_mean": c1_mean, "c1_intact_ci95": list(c1_ci),
             "headroom_gen1_saturated": bool(saturated),
             "feature_leaks_total": int(total_leaks),
-            "sgd_seed_spread": spread,
             "chains": chains,
             "gens": args.gens, "tau": TAU, "bottleneck": BOTTLENECK,
             "steps_gen": STEPS_GEN, "steps_founder": STEPS_FOUNDER,

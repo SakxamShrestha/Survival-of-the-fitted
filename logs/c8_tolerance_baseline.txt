@@ -1,0 +1,27 @@
+C-8 tolerance seed-spread baseline -- STEP 2, 2026-10-23
+
+Recorded BEFORE any Laplace-versus-SGD value was computed. The script that
+produced this file never calls analysis/laplace_glm.
+
+Baseline definition, from gates/thresholds.json C-8 "tolerance_not_a_gate":
+two frozen-body heads trained by SGD on identical transmitted data, differing
+only in training seed; predicted-class disagreement on the training pool;
+n = 20 pairs; 95 percent bootstrap interval, computed as C-1 computes its own.
+
+SGD objective is the posterior own objective after defect 1 fix: cross-entropy
+at reduction="sum" rescaled to the full transmitted batch, plus an explicit
+0.5 * alpha * ||w||^2 term in the loss, optimizer weight_decay = 0.
+
+founder (pool seed 0) training-pool accuracy: 0.113525390625
+hard-label chain, chain seed 600: gen1 alphabet 40, gen25 alphabet 1, leaks 0
+captured transmitted batches at generations [1, 25]
+
+generation 1: 40 of 50 classes in the transmitted batch of 128; base seed 2000
+  SGD seed-to-seed predicted-class disagreement, 20 pairs:
+    mean 0.161206  95% [0.136609, 0.190407]  min 0.098145  max 0.319092  [67s]
+
+generation 25: 1 of 50 classes in the transmitted batch of 128; base seed 3000
+  SGD seed-to-seed predicted-class disagreement, 20 pairs:
+    mean 0.000000  95% [0.000000, 0.000000]  min 0.000000  max 0.000000  [107s]
+
+wrote logs/c8_tolerance_baseline.json  (107s)

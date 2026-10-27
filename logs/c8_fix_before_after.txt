@@ -1,0 +1,27 @@
+C-8 -- before/after for the two code fixes, 2026-10-23. Descriptive, not a gate.
+
+Measured at generation 1 of the hard-label chain (pool seed 0, chain seed 600),
+where 40 of 50 classes appear in the transmitted batch. Each defect is isolated
+by holding the other fixed.
+
+generation 1, 40 of 50 classes, batch 128
+negative log posterior at the MAP: 423.999702
+
+defect1_unfixed: AdamW decoupled decay at alpha/N with mean cross-entropy
+  neg log posterior 4000.497979  excess over MAP 3576.498277
+  seed spread, 20 pairs: mean 0.048547 95% [0.045166, 0.052173]
+  vs GLM WITH intercept (defect 2 fixed):   0.487549  -> OUTSIDE
+  vs GLM WITHOUT intercept (defect 2 unfixed): 0.506104  -> OUTSIDE
+  [53s]
+
+defect1_fixed: sum cross-entropy + explicit 0.5*alpha*||w||^2, wd=0
+  neg log posterior 424.856621  excess over MAP 0.856918
+  seed spread, 20 pairs: mean 0.161206 95% [0.136609, 0.190407]
+  vs GLM WITH intercept (defect 2 fixed):   0.140625  -> WITHIN
+  vs GLM WITHOUT intercept (defect 2 unfixed): 0.178223  -> WITHIN
+  [90s]
+
+posterior diagnostics: augmented data_rank 128, prior_only 129 of 257; un-augmented data_rank 128, prior_only 128 of 256
+GLM-vs-head predicted-class mismatch at the founder, no intercept: 0.000000 (self, sanity)
+
+wrote logs/c8_fix_before_after.json (90s)

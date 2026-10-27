@@ -1,0 +1,26 @@
+C-8 tolerance statistic -- STEP 3, 2026-10-23
+
+Baseline READ from logs/c8_tolerance_baseline.json, not recomputed.
+
+baseline read from logs/c8_tolerance_baseline.json (recorded 2026-10-23, laplace_computed_in_this_script=False)
+chain reproduced: gen1 alphabet 40, gen25 alphabet 1, leaks 0
+
+--- generation 1: 40 of 50 classes in the transmitted batch of 128
+    baseline (step 2): mean 0.161206  95% [0.136609, 0.190407]
+    Laplace vs SGD predicted-class disagreement: 0.140625
+    agreement (1 - disagreement):                0.859375
+    posterior converged=True n_iter=5 data_rank=128 prior_only_directions=129
+    -> WITHIN the baseline interval
+    negative log posterior: MAP 423.999702   SGD 424.856621   excess 0.856918
+    same statistic with NO intercept column (defect 2 unfixed): 0.178223
+
+--- generation 25: 1 of 50 classes in the transmitted batch of 128
+    baseline (step 2): mean 0.000000  95% [0.000000, 0.000000]
+    Laplace vs SGD predicted-class disagreement: 0.000000
+    agreement (1 - disagreement):                1.000000
+    posterior converged=True n_iter=9 data_rank=128 prior_only_directions=129
+    -> WITHIN the baseline interval
+    negative log posterior: MAP 19.761440   SGD 37.917308   excess 18.155868
+    same statistic with NO intercept column (defect 2 unfixed): 0.000000
+
+wrote logs/c8_tolerance.json  (25s)

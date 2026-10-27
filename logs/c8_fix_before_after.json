@@ -1,0 +1,44 @@
+{
+ "describes_control": "C-8",
+ "control_key_withheld_because": "ci/check_gate_ordering.py collects a log by its \"control\" field and refuses when two logs declare the same control, because declaring one is how this repository says a run judges that gate. C-8's verdict-bearing run is logs/c8_frozen_body.json. This file is a descriptive before/after for the two code fixes and carries no gate verdict, so it does not declare the control.",
+ "artifact": "before/after for the two code fixes, descriptive",
+ "date": "2026-10-23",
+ "generation": 1,
+ "batch_classes_present": 40,
+ "neg_log_posterior_map": 423.9997023492208,
+ "arms": {
+  "defect1_unfixed": {
+   "sgd_objective": "AdamW decoupled decay at alpha/N with mean cross-entropy",
+   "neg_log_posterior_sgd": 4000.497979016767,
+   "excess_over_map": 3576.4982766675466,
+   "disagreement_vs_augmented_glm_defect2_fixed": 0.487548828125,
+   "disagreement_vs_no_intercept_glm_defect2_unfixed": 0.506103515625,
+   "baseline_mean": 0.04854736328125,
+   "baseline_ci95": [
+    0.045166015625,
+    0.05217315673828124
+   ],
+   "n_pairs": 20,
+   "verdict_defect2_fixed": "OUTSIDE",
+   "verdict_defect2_unfixed": "OUTSIDE"
+  },
+  "defect1_fixed": {
+   "sgd_objective": "sum cross-entropy + explicit 0.5*alpha*||w||^2, wd=0",
+   "neg_log_posterior_sgd": 424.8566208408508,
+   "excess_over_map": 0.8569184916299832,
+   "disagreement_vs_augmented_glm_defect2_fixed": 0.140625,
+   "disagreement_vs_no_intercept_glm_defect2_unfixed": 0.17822265625,
+   "baseline_mean": 0.1612060546875,
+   "baseline_ci95": [
+    0.13660888671875,
+    0.19040679931640622
+   ],
+   "n_pairs": 20,
+   "verdict_defect2_fixed": "WITHIN",
+   "verdict_defect2_unfixed": "WITHIN"
+  }
+ },
+ "augmented_data_rank": 128,
+ "augmented_prior_only_directions": 129,
+ "elapsed_sec": 90.2
+}

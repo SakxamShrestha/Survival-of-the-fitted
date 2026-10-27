@@ -1,0 +1,61 @@
+C-8 preregistered rule, committed 2026-10-20:
+  question Does alphabet contraction survive when the representation cannot change - and does the frozen-body head reproduce its own closed-form Laplace posterior?
+  gate A   freezing the representation does not change how far the alphabet contracts
+           fails if the frozen-body arm's 95 percent interval does not overlap C-1's intact-arm interval of [5.65, 9.25]
+  tolerance: a reproduction check, no null and no p-value; baseline is SGD's own
+             seed-to-seed disagreement, measured before the comparison is read
+
+One shared frozen body per chain: the body is initialized once, never trained, and the head is reinitialized and retrained from scratch each generation. That is the reading RESEARCH-PLAN section 4.1 forces by calling the feature space FIXED; under a fresh body per generation the feature space drifts and the Laplace comparison is ill-posed. Pools, founders and chain seeds are C-1's, so the frozen arm sees the same transmitted subsamples as the intact arm it is compared against. Gate A transmits soft logits to match that arm; the tolerance transmits hard labels because a Laplace posterior needs a categorical likelihood.
+
+comparison arm, C-1 intact, recomputed from its log: mean 7.50, 95% [5.65, 9.25] over 20 chains
+its founders span [0.977294921875, 0.984375000000] -- the precondition's range
+
+  chain  0  founder 0.113525  gen1 50  gen25 27  probe gen25 26  leaks 0  eff_rank 74.199   [   26s]
+  chain  1  founder 0.121338  gen1 50  gen25 31  probe gen25 32  leaks 0  eff_rank 75.756   [   53s]
+  chain  2  founder 0.123291  gen1 49  gen25 28  probe gen25 27  leaks 0  eff_rank 74.966   [   78s]
+  chain  3  founder 0.108154  gen1 48  gen25 16  probe gen25 19  leaks 0  eff_rank 73.807   [  104s]
+  chain  4  founder 0.111084  gen1 50  gen25 18  probe gen25 18  leaks 0  eff_rank 76.225   [  129s]
+  chain  5  founder 0.115234  gen1 50  gen25 30  probe gen25 30  leaks 0  eff_rank 76.715   [  154s]
+  chain  6  founder 0.119873  gen1 50  gen25 30  probe gen25 31  leaks 0  eff_rank 72.382   [  180s]
+  chain  7  founder 0.117920  gen1 50  gen25 33  probe gen25 30  leaks 0  eff_rank 72.673   [  205s]
+  chain  8  founder 0.119873  gen1 49  gen25 19  probe gen25 16  leaks 0  eff_rank 78.001   [  229s]
+  chain  9  founder 0.117676  gen1 50  gen25 26  probe gen25 27  leaks 0  eff_rank 72.494   [  253s]
+  chain 10  founder 0.117188  gen1 50  gen25 31  probe gen25 33  leaks 0  eff_rank 70.890   [  278s]
+  chain 11  founder 0.117188  gen1 50  gen25 24  probe gen25 23  leaks 0  eff_rank 73.017   [  302s]
+  chain 12  founder 0.120850  gen1 49  gen25 23  probe gen25 22  leaks 0  eff_rank 71.367   [  327s]
+  chain 13  founder 0.122559  gen1 50  gen25 24  probe gen25 24  leaks 0  eff_rank 75.326   [  351s]
+  chain 14  founder 0.120361  gen1 50  gen25 15  probe gen25 12  leaks 0  eff_rank 76.634   [  376s]
+  chain 15  founder 0.115723  gen1 50  gen25 18  probe gen25 18  leaks 0  eff_rank 73.446   [  400s]
+  chain 16  founder 0.115479  gen1 50  gen25 18  probe gen25 18  leaks 0  eff_rank 79.616   [  425s]
+  chain 17  founder 0.125977  gen1 49  gen25  8  probe gen25 10  leaks 0  eff_rank 75.817   [  450s]
+  chain 18  founder 0.121094  gen1 50  gen25 22  probe gen25 19  leaks 0  eff_rank 75.905   [  474s]
+  chain 19  founder 0.125244  gen1 50  gen25 22  probe gen25 21  leaks 0  eff_rank 74.808   [  498s]
+
+frozen-body arm: mean 23.15, 95% [20.25, 25.85]
+  generation 1:  mean 49.70, 95% [49.45, 49.90]
+
+descriptive, NO VERDICT -- held-out probe pool at probe_seed 9000:
+  generation 25 alphabet: mean 22.80, 95% [19.90, 25.60]
+  not compared against C-1, which has no n = 20 probe-pool anchor
+
+precondition, founder comparability: 0 of 20 frozen founders inside C-1's founder range
+  frozen founders span [0.108154296875, 0.125976562500]
+  -> NOT SATISFIED
+
+gate A: NOT EVALUABLE - the frozen-body founders do not fall inside the range C-1's own twenty founders span, so the two arms do not start from comparable models
+
+tolerance, hard-label transmission  [  498s]
+  generation 1: 40 of 50 classes in the transmitted batch of 128
+    SGD seed-to-seed disagreement, 20 pairs: mean 0.161206, 95% [0.136609, 0.190407]
+    Laplace vs SGD disagreement: 0.140625
+    posterior converged=True n_iter=5 data_rank=128 prior_only_directions=129
+    -> WITHIN the baseline interval : S-1 may proceed
+  generation 25: 1 of 50 classes in the transmitted batch of 128
+    SGD seed-to-seed disagreement, 20 pairs: mean 0.000000, 95% [0.000000, 0.000000]
+    Laplace vs SGD disagreement: 0.000000
+    posterior converged=True n_iter=9 data_rank=128 prior_only_directions=129
+    -> WITHIN the baseline interval : S-1 may proceed
+
+sanity: feature leaks across all chains and generations: 0 (must be 0)
+
+wrote logs/c8_frozen_body.json
