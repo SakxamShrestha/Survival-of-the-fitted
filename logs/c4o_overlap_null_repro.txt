@@ -1,0 +1,61 @@
+C-4O REPRODUCTION, run 2026-10-23.
+Same preregistered rule, same statistics, same seeds as
+controls/c4o_overlap_null.py; output written to a new log so the
+2026-10-20 record in logs/c4o_overlap_null.json stands untouched.
+
+C-4O preregistered rule, committed 2026-10-20:
+  question Does the same-founder survivor-set overlap survive a null that draws survivors in proportion to the founder's own generation-0 class frequency, or does 'founder identity' reduce to 'founder class-frequency imbalance'?
+  gate A  the observed same-founder overlap is not above a frequency-matched null
+          fails if one-sided resampling p < 0.05 for the observed mean pairwise Jaccard exceeding the frequency-matched null, over 10000 draws
+  gate B  the observed same-founder overlap is not above a frequency-matched null when measured by a size-insensitive statistic
+          fails if one-sided resampling p < 0.05 for the observed mean pairwise overlap coefficient exceeding the frequency-matched null, over 10000 draws
+
+No chains are trained. Arm A's twenty survivor sets are read unmodified from logs/seed_stability_n20.json; that file is read and never rewritten. The founder is rebuilt from founder_seed 0 at 3000 steps, which both that log and logs/c4_timing.json record at memorization accuracy 0.977294921875. Class weights are the founder's generation-0 predicted class frequency on the TRAINING pool, make_pool(seed=0), because that is the pool run_seed_stability.py defines its survivor sets on. The size-conditioned uniform null is recomputed here beside the frequency-matched one, so any difference is attributable to the weighting and not to the data handling.
+
+founder (seed 0) memorization accuracy 0.977294921875  (6.3s)
+founder training-pool class frequency: min 64, max 102, sum 4096, 50 of 50 classes predicted at all
+  spread max/min 1.59x against 81.9 per class for exact uniform
+  NOT bit-identical to the vector logs/c4o_overlap_null.json stored on 2026-10-20: 2 of 50 classes differ, class 25 80->82, class 48 82->80
+  The founder's accuracy, the min, the max and the sum all reproduce; what
+  moves is which of two near-tied classes wins an argmax. This shifts the
+  frequency-matched null's mean in the fourth decimal and so shifts the
+  separation below; it is recorded because the separation floor is read off
+  those digits, and it is far too small to move this verdict.
+Arm A survivor-set sizes: [9, 6, 5, 6, 11, 15, 9, 13, 11, 4, 3, 3, 7, 13, 12, 17, 8, 5, 12, 8]
+
+sanity:
+  founder memorization accuracy reproduces both logs: expected 0.977294921875, got 0.977294921875 -> match
+  every Arm A run records that same founder accuracy: expected 0.977294921875, got [0.977294921875] -> match
+  observed mean pairwise Jaccard reproduces seed_stability_stats.py: expected 0.193, got 0.1933 -> match
+  size-conditioned uniform null mean reproduces its 0.091: expected 0.091, got 0.0914 -> match
+  every survivor class index is inside the class range: expected 0 to 49, got 0 to 48 -> match
+
+=== C-4O REPRODUCTION VERDICT  (81s) ===
+gate A: NOT EVALUABLE - the frequency-matched null's mean 0.0922 is within one of its own standard deviations (0.0052) of the uniform null's mean 0.0914; separation 0.0008. Weighting by founder frequency did not move the null, so this is the uniform null under another name
+          frequency-matched null mean 0.0922 (sd 0.0052), uniform null mean 0.0914 (sd 0.0050), separation 0.0008 against a floor of 0.0052
+          against the uniform null the same statistic gives p = 0.0001; distinct assignments 1000000000000 over 50 classes with positive weight
+gate B: NOT EVALUABLE - the frequency-matched null's mean 0.2263 is within one of its own standard deviations (0.0125) of the uniform null's mean 0.2243; separation 0.0019. Weighting by founder frequency did not move the null, so this is the uniform null under another name
+          frequency-matched null mean 0.2263 (sd 0.0125), uniform null mean 0.2243 (sd 0.0121), separation 0.0019 against a floor of 0.0125
+          against the uniform null the same statistic gives p = 0.0001; distinct assignments 1000000000000 over 50 classes with positive weight
+
+Neither gate had the headroom the committed rule requires. This control
+returns no verdict and nothing should be concluded from it.
+
+mean pairwise Jaccard on Arm A, observed 0.1933, against each null this repository records:
+  analytic random-subset baseline 0.0970 -> 1.99x   [logs/seed_stability_n20.txt, Arm A 'random-subset baseline']
+  empirical size-conditioned uniform null 0.0914 -> 2.12x   [analysis/overlap_stats.size_conditioned_null]
+  empirical frequency-matched null 0.0922 -> 2.10x   [analysis/overlap_stats.frequency_matched_null]
+The third ratio is NOT a result. Its null's mean sits 0.0008 from the uniform null's mean against a
+committed separation floor of 0.0052, one of its own
+standard deviations, so on this pool the frequency-matched null is the uniform
+null under another name and the ratio against it carries no information about
+what the overlap adds over founder class frequency.
+
+For completeness, and as description rather than verdict: the observed 0.1933
+exceeds all 10000 frequency-matched draws (null max 0.1313), so its one-sided
+smoothed p against that null is 0.0001, the same value the uniform
+null gives. That identity is the finding, not a second significant result: the
+two nulls coincide because the weighting is flat, so neither p separates
+founder identity from founder class frequency.
+
+wrote logs/c4o_overlap_null_repro.json
