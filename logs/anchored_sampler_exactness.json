@@ -1,0 +1,126 @@
+{
+ "check": "anchored sampler linear-Gaussian exactness",
+ "purpose": "RESEARCH-PLAN.md section 4.2 stated the anchor-only formula while citing randomize-then-optimize's exactness result. This records which of the two samples the posterior it claims to.",
+ "model": {
+  "n_samples": 60,
+  "n_features": 8,
+  "noise_sd": 0.5,
+  "prior_sd": 1.3
+ },
+ "n_draws": 20000,
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "tolerances": {
+  "sd_ratio": 0.05,
+  "trace_ratio": 0.05,
+  "mean_sigmas": 5.0
+ },
+ "results": [
+  {
+   "variant": "anchor_only",
+   "max_mean_dev": 3.133067923777322e-05,
+   "max_mean_dev_sigmas": 0.06147868121993583,
+   "sd_ratio_min": 0.04569070981412581,
+   "sd_ratio_max": 0.062292441532236946,
+   "trace_ratio": 0.003123697604706446,
+   "n_draws": 20000,
+   "seed": 0,
+   "passed": false,
+   "reason": "marginal standard deviations are wrong: ratio to the exact posterior spans 0.0457 to 0.0623, tolerance 1 +/- 0.05. The narrowest coordinate is 21.9x too narrow"
+  },
+  {
+   "variant": "anchor_only",
+   "max_mean_dev": 4.541858499460677e-05,
+   "max_mean_dev_sigmas": 0.07373564466245754,
+   "sd_ratio_min": 0.04874525052029468,
+   "sd_ratio_max": 0.08143056063545139,
+   "trace_ratio": 0.00492106266891181,
+   "n_draws": 20000,
+   "seed": 1,
+   "passed": false,
+   "reason": "marginal standard deviations are wrong: ratio to the exact posterior spans 0.0487 to 0.0814, tolerance 1 +/- 0.05. The narrowest coordinate is 20.5x too narrow"
+  },
+  {
+   "variant": "anchor_only",
+   "max_mean_dev": 2.7502316659655524e-05,
+   "max_mean_dev_sigmas": 0.05954862415852692,
+   "sd_ratio_min": 0.044837656526282646,
+   "sd_ratio_max": 0.06819289700892858,
+   "trace_ratio": 0.0033247661694211015,
+   "n_draws": 20000,
+   "seed": 2,
+   "passed": false,
+   "reason": "marginal standard deviations are wrong: ratio to the exact posterior spans 0.0448 to 0.0682, tolerance 1 +/- 0.05. The narrowest coordinate is 22.3x too narrow"
+  },
+  {
+   "variant": "randomize_then_optimize",
+   "max_mean_dev": 0.0008622540493635755,
+   "max_mean_dev_sigmas": 1.8450173953756996,
+   "sd_ratio_min": 0.9961108558278586,
+   "sd_ratio_max": 1.005910430505612,
+   "trace_ratio": 1.0001801371924526,
+   "n_draws": 20000,
+   "seed": 0,
+   "passed": true,
+   "reason": null
+  },
+  {
+   "variant": "randomize_then_optimize",
+   "max_mean_dev": 0.0010471358776187323,
+   "max_mean_dev_sigmas": 1.8806661336616735,
+   "sd_ratio_min": 0.9918998110754409,
+   "sd_ratio_max": 1.0063222217645689,
+   "trace_ratio": 0.9973781483232014,
+   "n_draws": 20000,
+   "seed": 1,
+   "passed": true,
+   "reason": null
+  },
+  {
+   "variant": "randomize_then_optimize",
+   "max_mean_dev": 0.0009107736644097808,
+   "max_mean_dev_sigmas": 1.546258381875083,
+   "sd_ratio_min": 0.9977851040074363,
+   "sd_ratio_max": 1.0040975773179335,
+   "trace_ratio": 1.004409265767241,
+   "n_draws": 20000,
+   "seed": 2,
+   "passed": true,
+   "reason": null
+  }
+ ],
+ "anchor_only_sd_ratio_by_n": [
+  {
+   "n_samples": 0,
+   "mean_sd_ratio": 1.0
+  },
+  {
+   "n_samples": 4,
+   "mean_sd_ratio": 0.9715136504430169
+  },
+  {
+   "n_samples": 8,
+   "mean_sd_ratio": 0.825760517949103
+  },
+  {
+   "n_samples": 16,
+   "mean_sd_ratio": 0.13810874378441648
+  },
+  {
+   "n_samples": 64,
+   "mean_sd_ratio": 0.054309586861799854
+  },
+  {
+   "n_samples": 256,
+   "mean_sd_ratio": 0.0247129096427671
+  }
+ ],
+ "anchor_only_fails_every_seed": true,
+ "randomize_then_optimize_passes_every_seed": true,
+ "numpy_version": "2.0.2",
+ "python_version": "3.12.7",
+ "elapsed_sec": 1.92
+}
