@@ -387,6 +387,53 @@ def fig_c4o_null_separation():
     save(fig, "fig7_c4o_null_separation.png")
 
 
+def fig_sampler_exactness():
+    """S-1 precondition: the plan's sampler was correctly centred and far too narrow.
+
+    Left, every seed's range of marginal standard-deviation ratios against the
+    exact linear-Gaussian posterior, on a log axis because the anchor-only
+    variant sits a factor of twenty below the band. Right, the analytic ratio
+    for the anchor-only variant as the number of observations grows: it is
+    exact only with no data, so more draws cannot rescue it. Both panels read
+    logs/anchored_sampler_exactness.json and nothing else.
+    """
+    with open(os.path.join(LOGS, "anchored_sampler_exactness.json")) as handle:
+        data = json.load(handle)
+    tol = data["tolerances"]["sd_ratio"]
+
+    fig, (a, b) = plt.subplots(1, 2, figsize=(10.4, 4.2))
+    variants = (("anchor_only", CAT[1], "anchor only (plan's formula)"),
+                ("randomize_then_optimize", CAT[0], "randomize-then-optimize"))
+    for offset, (name, color, label) in enumerate(variants):
+        rows = [r for r in data["results"] if r["variant"] == name]
+        for i, r in enumerate(rows):
+            x = r["seed"] + (offset - 0.5) * 0.28
+            a.plot([x, x], [r["sd_ratio_min"], r["sd_ratio_max"]],
+                   color=color, linewidth=6, solid_capstyle="butt",
+                   label=label if i == 0 else None)
+    a.axhspan(1 - tol, 1 + tol, color=CAT[2], alpha=0.15, linewidth=0)
+    a.annotate(f"pass band 1 \u00b1 {tol}", (-0.35, 1 + tol), fontsize=9,
+               color=CAT[2], ha="left", va="bottom")
+    a.set_yscale("log")
+    a.set_ylim(0.02, 2.0)
+    a.set_xlim(-0.4, 2.4)
+    a.set_xticks([r["seed"] for r in data["results"] if r["variant"] == "anchor_only"])
+    style(a, "seed", "sd ratio to exact posterior, min to max",
+          "Both centred correctly; only one has the right width")
+    a.legend(frameon=False, fontsize=9, labelcolor=INK, loc="center right")
+
+    series = data["anchor_only_sd_ratio_by_n"]
+    b.plot([r["n_samples"] for r in series], [r["mean_sd_ratio"] for r in series],
+           color=CAT[1], linewidth=2, marker="o")
+    b.axhline(1.0, color=MUTED, linewidth=1.2, linestyle=(0, (4, 3)))
+    b.set_xscale("symlog", linthresh=4)
+    b.set_xlim(0, 300)
+    b.set_ylim(0, 1.1)
+    style(b, "observations N (analytic, no sampling)", "anchor-only mean sd ratio",
+          "Exact only when there is no data")
+    save(fig, "fig8_sampler_exactness.png")
+
+
 if __name__ == "__main__":
     fig_train_vs_probe()
     fig_cka_blindness()
@@ -395,3 +442,4 @@ if __name__ == "__main__":
     fig_c1()
     fig_c3_budget()
     fig_c4o_null_separation()
+    fig_sampler_exactness()
