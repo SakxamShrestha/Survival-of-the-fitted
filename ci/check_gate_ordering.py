@@ -82,12 +82,11 @@ def git_lines(*args):
 
 
 def logs_by_control():
-    """Map each control id to the log file that declares it.
+    """Map each control id to every log file that declares it.
 
-    A control that somehow wrote two logs declaring the same id is an error
-    rather than a tie to break quietly: the check would then have to choose
-    which run the gate is ordered against, and that choice is not the
-    checker's to make.
+    A control may write several logs: S-1 writes one per precondition stage,
+    and C-8b was rerun under the torch version C-1 used. No log is chosen over
+    another; the gate must precede each of them, so every one is checked.
     """
     found = {}
     for path in sorted(glob.glob(LOGS_GLOB)):
@@ -101,13 +100,7 @@ def logs_by_control():
         control = payload.get("control")
         if not control:
             continue
-        relpath = os.path.relpath(path, REPO)
-        if control in found:
-            raise RuntimeError(
-                f"two logs both declare control {control}: {found[control]} and "
-                f"{relpath}; the gate cannot be ordered against an ambiguous run"
-            )
-        found[control] = relpath
+        found.setdefault(control, []).append(os.path.relpath(path, REPO))
     return found
 
 
@@ -201,16 +194,16 @@ def audit():
     for control, entry in gates.items():
         if control.startswith("_"):
             continue
-        log = logs.get(control)
-        if log is None:
+        control_logs = logs.get(control)
+        if not control_logs:
             rows.append({
                 "control": control, "status": "pending", "log": None,
                 "detail": "preregistered; no log declares this control yet",
             })
             continue
-        rows.append(classify(control, entry, log))
+        rows.extend(classify(control, entry, log) for log in control_logs)
 
-    mapped = set(logs.values())
+    mapped = {path for paths in logs.values() for path in paths}
     unmapped = sorted(
         os.path.relpath(path, REPO) for path in glob.glob(LOGS_GLOB)
         if os.path.relpath(path, REPO) not in mapped
@@ -232,13 +225,15 @@ def main():
     if not quiet:
         print("=== gate ordering: was each rule committed before its run? ===\n")
         for row in sorted(rows, key=lambda r: r["control"]):
-            print(f"  {row['control']:6} {row['status']:12} {row['detail']}")
+            where = f"  [{row['log']}]" if row["log"] else ""
+            print(f"  {row['control']:6} {row['status']:12} {row['detail']}{where}")
         if unmapped:
             print("\nlogs declaring no control id, not checked:")
             for path in unmapped:
                 print(f"  {path}")
-        print(f"\n{len(violations)} violation(s) across {len(rows)} preregistered "
-              "control(s).")
+        n_controls = len({row["control"] for row in rows})
+        print(f"\n{len(violations)} violation(s) across {len(rows)} log(s) of "
+              f"{n_controls} preregistered control(s).")
         if violations:
             print("A violation means the evidence for preregistration is absent for "
                   "that control, not that its result is wrong. It cannot be repaired "
