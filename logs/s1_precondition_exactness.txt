@@ -1,0 +1,20 @@
+=== S-1 precondition_sampler_exactness, through analysis/ggn_sampler ===
+linear-Gaussian N=60 D=8 noise sd 0.5 prior sd 1.3, 20000 draws, seeds (0, 1, 2)
+path: GaussianLikelihood -> map_pass -> sample -> draw_pass (the chain's functions)
+optimizer: {'adam_steps': 3000, 'adam_lr': 0.001, 'max_iter': 500, 'tolerance_grad': 1e-09, 'tolerance_change': 1e-15, 'history_size': 20, 'max_rounds': 2}
+tolerances (analysis/anchored_sampler_check): mean <= 5 SE of exact sd, every sd ratio 1 +/- 0.05, trace ratio 1 +/- 0.05
+
+seed 0 lambda     1 [VERDICT] -> PASS  mean 1.38 SE  sd ratio 0.9969-1.0051  trace 1.0007  MAP-vs-exact 1.6e-08 sd  draw |grad| 5.0e-09  (54.87s)
+seed 0 lambda    10 [supplementary] -> PASS  mean 1.34 SE  sd ratio 0.9965-1.0046  trace 1.0008  MAP-vs-exact 8.3e-09 sd  draw |grad| 5.3e-08  (51.11s)
+seed 0 lambda   100 [supplementary] -> PASS  mean 1.33 SE  sd ratio 0.9963-1.0045  trace 1.0009  MAP-vs-exact 1.4e-07 sd  draw |grad| 1.2e-08  (47.6s)
+seed 1 lambda     1 [VERDICT] -> PASS  mean 1.59 SE  sd ratio 0.9972-1.0116  trace 1.0052  MAP-vs-exact 2.0e-09 sd  draw |grad| 8.1e-10  (47.24s)
+seed 1 lambda    10 [supplementary] -> PASS  mean 1.67 SE  sd ratio 0.9972-1.0118  trace 1.0055  MAP-vs-exact 6.1e-08 sd  draw |grad| 1.3e-08  (47.1s)
+seed 1 lambda   100 [supplementary] -> PASS  mean 1.70 SE  sd ratio 0.9972-1.0119  trace 1.0056  MAP-vs-exact 8.4e-08 sd  draw |grad| 8.7e-06  (47.48s)
+seed 2 lambda     1 [VERDICT] -> PASS  mean 2.40 SE  sd ratio 0.9933-1.0070  trace 1.0025  MAP-vs-exact 1.5e-08 sd  draw |grad| 5.7e-09  (47.06s)
+seed 2 lambda    10 [supplementary] -> PASS  mean 2.36 SE  sd ratio 0.9932-1.0069  trace 1.0024  MAP-vs-exact 5.4e-09 sd  draw |grad| 5.7e-07  (47.34s)
+seed 2 lambda   100 [supplementary] -> PASS  mean 2.34 SE  sd ratio 0.9932-1.0069  trace 1.0024  MAP-vs-exact 1.7e-08 sd  draw |grad| 1.2e-06  (47.7s)
+
+=== precondition_sampler_exactness: PASS (3 of 3 seeds) ===
+supplementary tempered lambda 10, 100 (not in the committed shape, no verdict): all pass
+scope: certifies the Gaussian branch of the shared draw/MAP functions and their optimizer on a convex problem; not B^{1/2}, softmax curvature or the MLP.
+wrote logs/s1_precondition_exactness.json
