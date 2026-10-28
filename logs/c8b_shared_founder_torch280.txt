@@ -1,0 +1,51 @@
+C-8b rule committed 2026-10-27: Given an identical founder, does a learner whose representation cannot change contract the alphabet as far as the full MLP does?
+C-1 interval re-derivation: {'intact_ci95_rederived': [5.65, 9.25], 'intact_ci95_logged': [5.65, 9.25], 'shuffled_ci95_rederived': [1.2, 1.7], 'shuffled_ci95_logged': [1.2, 1.7], 'match': True}
+seed  0 chain 600  founder_acc 0.977294921875  frozen 47->1  companion 50->41  intact_g1 49  39s
+seed  1 chain 601  founder_acc 0.979736328125  frozen 48->1  companion 50->47  intact_g1 50  78s
+seed  2 chain 602  founder_acc 0.98095703125  frozen 48->2  companion 50->41  intact_g1 50  115s
+seed  3 chain 603  founder_acc 0.97802734375  frozen 46->2  companion 50->45  intact_g1 49  152s
+seed  4 chain 604  founder_acc 0.98291015625  frozen 46->1  companion 49->42  intact_g1 50  189s
+seed  5 chain 605  founder_acc 0.98193359375  frozen 46->1  companion 50->41  intact_g1 50  226s
+seed  6 chain 606  founder_acc 0.9814453125  frozen 43->1  companion 50->40  intact_g1 49  262s
+seed  7 chain 607  founder_acc 0.982177734375  frozen 46->1  companion 49->43  intact_g1 50  298s
+seed  8 chain 608  founder_acc 0.97802734375  frozen 48->1  companion 49->40  intact_g1 50  334s
+seed  9 chain 609  founder_acc 0.984375  frozen 45->2  companion 49->41  intact_g1 49  371s
+seed 10 chain 610  founder_acc 0.979248046875  frozen 47->2  companion 50->40  intact_g1 49  407s
+seed 11 chain 611  founder_acc 0.98193359375  frozen 45->1  companion 50->47  intact_g1 50  443s
+seed 12 chain 612  founder_acc 0.981689453125  frozen 43->2  companion 49->38  intact_g1 50  479s
+seed 13 chain 613  founder_acc 0.98095703125  frozen 47->2  companion 49->42  intact_g1 49  515s
+seed 14 chain 614  founder_acc 0.98388671875  frozen 46->1  companion 49->40  intact_g1 49  552s
+seed 15 chain 615  founder_acc 0.979248046875  frozen 47->2  companion 50->41  intact_g1 50  588s
+seed 16 chain 616  founder_acc 0.980712890625  frozen 46->2  companion 49->36  intact_g1 49  624s
+seed 17 chain 617  founder_acc 0.981201171875  frozen 42->1  companion 47->45  intact_g1 49  660s
+seed 18 chain 618  founder_acc 0.981201171875  frozen 47->2  companion 48->41  intact_g1 49  696s
+seed 19 chain 619  founder_acc 0.97900390625  frozen 46->1  companion 48->45  intact_g1 50  733s
+
+=== C-8b GATE A (17 gated chains, 603-619, training pool) ===
+founder identity precondition : PASS
+frozen  gen-25 : 1.471 [1.235, 1.706] (n=17)
+intact  gen-25 : 7.706 [5.706, 9.588] (n=17)   (C-1 log, same 17 seeds)
+frozen  gen-1  : 45.647 [44.882, 46.353] (n=17)   (floor 1)
+C-1 shuffled CI (logged, n=20): [1.2, 1.7]   (floor 2)
+raw two-sided reading: deeper
+OUTCOME: deeper (to the floor)   floor fired: headroom_2_shuffled_floor
+
+mean alphabet over gens 1-25:
+  frozen 12.746 [11.595, 13.988] (n=17)
+  intact 33.301 [32.202, 34.294] (n=17)
+fidelity covariate (gen-1 agreement with founder, not gated):
+  frozen 0.051 [0.050, 0.052] (n=17)
+  intact 0.060 [0.059, 0.061] (n=17)
+
+descriptive companion, founder's own body frozen (NOT GATED):
+  gen-25 41.588 [40.294, 42.882] (n=17)   gen-1 49.118 [48.706, 49.471] (n=17)
+  mean over gens 45.407 [44.781, 46.057] (n=17)   agree gen-1 0.139 [0.135, 0.143] (n=17)
+
+disclosed chains 600-602 (EXCLUDED from the gate):
+  {'chain_seed': 600, 'frozen_final': 1, 'companion_final': 41, 'c1_intact_final': 2, 'frozen_agree_gen1': 0.0537109375, 'intact_agree_gen1': 0.0595703125}
+  {'chain_seed': 601, 'frozen_final': 1, 'companion_final': 47, 'c1_intact_final': 5, 'frozen_agree_gen1': 0.051513671875, 'intact_agree_gen1': 0.057373046875}
+  {'chain_seed': 602, 'frozen_final': 2, 'companion_final': 41, 'c1_intact_final': 12, 'frozen_agree_gen1': 0.0498046875, 'intact_agree_gen1': 0.060302734375}
+
+sanity: {"feature_leaks_total": 0, "body_state_changes_total": 0, "c1_log_sha256_unchanged": true, "c1_intervals_rederived": true}
+
+wall 733.4s; wrote logs/c8b_shared_founder_torch280.json
