@@ -434,6 +434,107 @@ def fig_sampler_exactness():
     save(fig, "fig8_sampler_exactness.png")
 
 
+def fig_c8b_three_arms():
+    """C-8b: what the chain does when the representation cannot change.
+
+    Three arms on the same seventeen gated chains, mean surviving alphabet per
+    generation on the TRAINING POOL, which is where C-8b's gate A is defined --
+    the pool is named in the axis label because this project has already paid
+    once for a figure that spliced two of them. The frozen random body and the
+    frozen founder body come from logs/c8b_shared_founder_torch280.json; the
+    intact arm is read from C-1's own log for the same chain seeds. The shaded
+    band is C-1's logged shuffled-control interval, the floor that capped the
+    verdict at "deeper, to the floor" -- the frozen arm ends inside it, so depth
+    beyond that band is not read.
+    """
+    with open(os.path.join(LOGS, "c8b_shared_founder_torch280.json")) as handle:
+        c8b = json.load(handle)
+    with open(os.path.join(LOGS, "c1_shuffled_n20.json")) as handle:
+        c1 = json.load(handle)
+
+    gated = set(c8b["gated_chain_seeds"])
+    runs = [r for r in c8b["runs"] if r["chain_seed"] in gated]
+    intact = [r for r in c1["results"]["intact"] if r["chain_seed"] in gated]
+    if len(runs) != len(gated) or len(intact) != len(gated):
+        raise SystemExit("gated chain seeds missing from one of the two logs")
+
+    gens = list(range(1, c8b["gens"] + 1))
+
+    def mean_by_gen(series):
+        return [sum(s[i] for s in series) / len(series) for i in range(len(gens))]
+
+    arms = (
+        (mean_by_gen([r["companion_founder_body"]["sizes"] for r in runs]),
+         CAT[2], "founder's own body, frozen (descriptive, not gated)"),
+        (mean_by_gen([r["sizes"] for r in intact]),
+         CAT[0], "intact MLP (representation free to move)"),
+        (mean_by_gen([r["frozen_random_body"]["sizes"] for r in runs]),
+         CAT[1], "random body, frozen"),
+    )
+
+    fig, ax = plt.subplots(figsize=(7.4, 4.6))
+    lo, hi = c1["shuffled_ci95"]
+    ax.axhspan(lo, hi, color=MUTED, alpha=0.16, linewidth=0)
+    ax.annotate("C-1 shuffled-control interval (the floor)", (1.3, hi + 0.6),
+                fontsize=8.5, color=MUTED, ha="left", va="bottom")
+    for series, color, label in arms:
+        ax.plot(gens, series, color=color, linewidth=2, label=label)
+    ax.set_xlim(1, len(gens))
+    ax.set_ylim(0, N_CLASSES)
+    style(ax, "generation",
+          f"mean surviving classes of {N_CLASSES} (training pool, n={len(runs)})",
+          "The representation a chain is stuck with decides how far it contracts")
+    legend = ax.legend(fontsize=9, labelcolor=INK, loc="upper right",
+                       bbox_to_anchor=(1.0, 0.70), frameon=True,
+                       facecolor="white", edgecolor="none", framealpha=0.92)
+    legend.get_frame().set_linewidth(0)
+    save(fig, "fig9_c8b_three_arms.png")
+
+
+def fig_rank_vs_alphabet():
+    """Effective rank is not a proxy for the alphabet, and at B = 128 it inverts.
+
+    One chain, held-out probe pool, read from logs/c6_probe_pool.json. The
+    alphabet falls from 48 classes to 9 while the effective rank of the
+    representation falls only to generation ten and then climbs back ABOVE where
+    it started. Both axes are the same run, so this is a statement about two
+    metrics disagreeing rather than about two conditions. n = 1 chain: C-6 runs
+    one chain per condition, and the only twenty-run log at this bottleneck
+    records alphabets without effective rank, so no interval can be put on
+    either curve here.
+    """
+    with open(os.path.join(LOGS, "c6_probe_pool.json")) as handle:
+        c6 = json.load(handle)
+    rows = [r for r in c6["results"] if r["condition"] == "tau1.0_b128"][0]["rows"]
+    gens = [r["gen"] for r in rows]
+    rank = [r["probe"]["eff_rank"] for r in rows]
+    alpha = [r["probe"]["n_classes_used"] for r in rows]
+
+    fig, ax = plt.subplots(figsize=(7.4, 4.6))
+    ax.plot(gens, alpha, color=CAT[1], linewidth=2, label="surviving classes")
+    ax.set_ylim(0, N_CLASSES)
+    style(ax, "generation", f"surviving classes of {N_CLASSES} (probe pool)",
+          "At B = 128 the alphabet collapses while the rank recovers")
+
+    twin = ax.twinx()
+    twin.plot(gens, rank, color=CAT[0], linewidth=2, label="effective rank")
+    twin.axhline(rank[0], color=CAT[0], linewidth=1.1, linestyle=(0, (4, 3)))
+    twin.annotate("generation-1 rank", (2.0, rank[0] + 0.4), fontsize=8.5,
+                  color=CAT[0], ha="left", va="bottom")
+    twin.set_ylabel("effective rank of representation", fontsize=10, color=MUTED)
+    twin.set_ylim(0, max(rank) * 1.35)
+    twin.tick_params(colors=MUTED, labelsize=9)
+    twin.spines["top"].set_visible(False)
+    twin.spines["right"].set_color(GRID)
+
+    handles = ax.get_legend_handles_labels()[0] + twin.get_legend_handles_labels()[0]
+    labels = ax.get_legend_handles_labels()[1] + twin.get_legend_handles_labels()[1]
+    ax.legend(handles, labels, frameon=False, fontsize=9, labelcolor=INK,
+              loc="lower left")
+    ax.set_xlim(1, len(gens))
+    save(fig, "fig10_rank_vs_alphabet.png")
+
+
 if __name__ == "__main__":
     fig_train_vs_probe()
     fig_cka_blindness()
@@ -443,3 +544,5 @@ if __name__ == "__main__":
     fig_c3_budget()
     fig_c4o_null_separation()
     fig_sampler_exactness()
+    fig_c8b_three_arms()
+    fig_rank_vs_alphabet()
