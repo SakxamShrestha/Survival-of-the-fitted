@@ -1222,6 +1222,157 @@
         "the threshold move this file exists to prevent. The forecast is written here so that a refusal at",
         "sigma_match is read as the predicted consequence of a strong prior, not as a surprise."
       ]
+    },
+    "design_amendment_2026_11_08": {
+      "added": "2026-11-08, before any S-1 chain has been run. Five decisions this entry left open and the code therefore made silently. It changes no gate, threshold, grid, statistic or order; each clause only names what was already unstated.",
+      "why": [
+        "Reviewing this entry against controls/s1_sampler_arm.py, which now implements it, found five",
+        "places where the rule says nothing and the runner had to pick. Three of the five were picked by",
+        "working code, so those clauses record the built behaviour rather than changing it; two were",
+        "genuinely undetermined and are decided here. A rule that is silent while code decides is a rule",
+        "that decided nothing, and the silence is only discoverable by reading both - which is why this is",
+        "written now rather than when a verdict is being read."
+      ],
+
+      "chains_per_founder": {
+        "value": 2,
+        "scope": "Equal for every founder and every (lambda, sigma) cell. R = 2 exactly.",
+        "why": [
+          "Forced by two gates that were committed without it. Gate A's metric is leave-one-chain-out over",
+          "20 founders: at R = 1, holding out a founder's only chain leaves that class with no training",
+          "chain and per-class balanced accuracy undefined for it. Gate B compares a same-founder arm",
+          "against a different-founder arm: at R = 1 there are no same-founder pairs, and the named",
+          "implementation refuses - analysis/overlap_stats.py raises 'each arm needs at least two chains",
+          "for a pairwise statistic'. Two is the minimum that makes both computable. It is not a power",
+          "claim and no interval below should be read as though it were."
+        ]
+      },
+
+      "founders_and_pools": {
+        "founders": "20 founders at pool seeds 0-19, built by C-1's recipe: torch.manual_seed(s), make_pool(seed=s, kind='noise'), MLP, train 3000 steps. One pool per founder, NOT one shared pool.",
+        "already_built": "This is what controls/s1_sampler_arm.py build_founder() does. The clause records it; it does not change it.",
+        "founder_accuracy_clause": [
+          "sanity_check names a single established accuracy, 0.977294921875, while this arm requires 20",
+          "founders. That figure is the seed-0 case. The logged range across these 20 founders is",
+          "0.977294921875 to 0.984375 (logs/c8b_shared_founder_torch280.txt), a span of 0.00708, so the",
+          "existing 0.01 clause happens not to fire - but it is written as if there were one founder. It is",
+          "read per founder against that founder's own seed, and a departure is reported, not pooled."
+        ],
+        "pool_for_gates_and_floor_1": "The held-out probe pool at probe_seed 9000. Gates A, B and C and headroom floor 1 are all read there.",
+        "why_that_pool": [
+          "The entry names the probe pool only inside precondition_inertness; the gates and floors name no",
+          "pool at all. Floor 1's threshold of 4.0 surviving classes was derived from 4.4, which is a",
+          "PROBE-pool number (logs/c2_no_chaining.txt, header 'B=128: one-step reference over 50 students",
+          "(probe pool)'). Its training-pool counterpart at the same bottleneck is 8.8",
+          "(logs/seed_stability_n20.txt). Reading the gates on the training pool would leave the floor",
+          "compared against a regime whose maximizer counterpart is roughly twice its calibration point -",
+          "the floor's bite would change without its number changing. The runner already records both",
+          "pools per generation, so this choice costs no rework.",
+          "",
+          "Consequence to state when the gates are read: this is the pool the floor was calibrated on, and",
+          "it is not the pool C-8b gate A or C-1 are defined on. Do not quote an S-1 alphabet beside a",
+          "C-8b alphabet without naming both pools."
+        ]
+      },
+
+      "negative_control_rate_and_budget": {
+        "dropout_rate": 0.1,
+        "placement": "Hidden activations h1 and h2 only, per-example masks during training with inverted scaling, and one per-unit mask frozen into the student as the draw. This is what controls/s1_sampler_arm.py dropout_student() already implements; only the rate was undetermined.",
+        "why_this_rate": [
+          "The control's job is to NOT reproduce whatever gates A, B and C find. A rate high enough to",
+          "cripple a 256-unit layer would make that trivially true for a capacity reason and so would say",
+          "nothing about sampling. 0.1 keeps the control a plausible 'injected noise without a posterior'",
+          "comparison. Fixed here because the rule never named it and the runner makes --dropout-p a",
+          "required flag with no default precisely so that no value could be baked in silently."
+        ],
+        "same_budget_means": [
+          "The same number of full-batch gradient steps in the learning step's optimisation: 3000.",
+          "MC dropout runs ONE 3000-step cosine-Adam pass with no L-BFGS polish, because a strong-Wolfe",
+          "line search is not defined on a stochastic objective. The sampler runs TWO 3000-step passes,",
+          "each with an L-BFGS polish. The control is therefore budget-matched PER PASS and not per",
+          "generation, and the asymmetry is reported beside the comparison rather than described as an",
+          "identical budget. Saying 'identical budget' when it is not is the kind of unstated assumption",
+          "this amendment exists to remove."
+        ]
+      },
+
+      "inertness_scope": {
+        "read": "Per (lambda, sigma) cell, all six.",
+        "verdict_bearing_reading": "The anchor theta0 and the logit noise xi at a FIXED MAP. That reading carries the verdict.",
+        "reported_but_not_verdict_bearing": "The per-draw-MAP reading, which also varies the MAP initialisation, is reported beside it.",
+        "aggregation": "The arm is BROKEN unless every cell passes under the verdict-bearing reading. A cell that fails is named, no gate is read on it, and the combination rule's PARTIAL applies with the refused cells listed.",
+        "reading_dependent": [
+          "controls/s1_sampler_arm.py can currently emit the verdict string 'READING-DEPENDENT' when the",
+          "two readings disagree across cells, and this entry defines no such verdict, so the runner could",
+          "return a word the rule cannot interpret. It is defined here: READING-DEPENDENT means the",
+          "verdict-bearing reading passed on every cell and the per-draw-MAP reading did not. It is NOT",
+          "BROKEN. It is reported as a disclosed difference between the two readings, and the gates are",
+          "read."
+        ]
+      },
+
+      "cell_coverage": {
+        "rule": [
+          "Cells are run in this committed order: lambda 100 then 10 then 1, and within each lambda,",
+          "4 x sigma_match before sigma_match. The arm's verdict is read on the cells COMPLETED, naming",
+          "them and naming the cells not run. Holm-Bonferroni remains across gates A, B and C within the",
+          "completed coverage and is NOT extended across cells. Incomplete coverage is reported as",
+          "COVERAGE-LIMITED beside the gate verdicts. No cell is added or dropped after any gate has been",
+          "read."
+        ],
+        "why_an_order_is_fixed_now": [
+          "multiplicity_correction is committed across gates A, B and C only, and the combination block's",
+          "PARTIAL vocabulary is also gate-wise, so nothing in this entry licensed or forbade reading a",
+          "verdict on a subset of cells. Choosing which cells to run after the rule was committed would be",
+          "an un-preregistered choice of analysis coverage. lambda = 100 is first because sanity_check",
+          "requires the arm to approximately reproduce the maximizer arm there, so it is the cell where a",
+          "mis-specified sampler is most visible; 4 x sigma_match precedes sigma_match because the",
+          "forecast already recorded above predicts the sigma_match cells are the ones floor 1 will refuse."
+        ],
+        "lambda_100_sanity_check_reads_against": [
+          "'The maximizer arm's published survivor-alphabet behaviour at the same bottleneck' has three",
+          "logged candidates at B = 128 and the entry does not say which: 4.4 (probe pool, soft logits,",
+          "logs/c2_no_chaining.txt), 8.8 (training pool, soft logits, logs/seed_stability_n20.txt), and 1.6",
+          "(training pool, SAMPLED HARD LABELS, logs/seed_stability_n20.txt arm C). It is read against the",
+          "arm C figure, 1.6, because sampled hard labels is the transmission this arm uses",
+          "(fixed_in_advance.transmission) and the other two are soft-logit arms. Named here because",
+          "picking among three after seeing the sampler's alphabet would be a forking path."
+        ]
+      },
+
+      "status_of_an_unrun_precondition": {
+        "decision": "An UNRUN precondition is not a failed one. Gates A, B and C may be read while precondition_categorical_ggn_exactness has no verdict, provided every verdict carries the wording below.",
+        "required_wording": "Every verdict from this arm is stated as holding 'under a MAP-centred GGN posterior sampler whose head-level exactness check has not been run', and the absence is named in the same sentence as the result, not in a footnote.",
+        "what_still_carries_the_weight": "precondition_sampler_exactness, which PASSED on all three seeds through the chain's own map_pass and draw_pass (logs/s1_precondition_exactness.txt). It certifies anchor scaling, lambda placement, the per-layer prior form, sum reduction and inner-optimiser convergence on a convex problem. It does NOT certify the B^{1/2} computation, softmax curvature, or anything about the nonlinear network - and that gap is exactly what the unrun check would have closed.",
+        "what_does_NOT_change": "A precondition that RUNS and FAILS is still BROKEN, no gate is read, and no statement is made about whether the sampler/maximizer distinction transfers. This clause distinguishes unrun from failed; it does not weaken failure.",
+        "why": [
+          "Two committed passages disagree and neither covers 'not run'. This precondition's own clause",
+          "reads 'Read after precondition_sampler_exactness and before inertness', which is the language of",
+          "a hard prerequisite. The combination block, written 2026-10-20 at a6d477e, names only TWO",
+          "preconditions and was not updated when this one was added at 4c9bbc2 - that commit was a pure",
+          "addition. Both speak only of failure. The ambiguity is therefore an artefact of how the",
+          "amendment was filed, not a considered position, and it is resolved here rather than at the",
+          "moment a verdict is wanted.",
+          "",
+          "Decided BEFORE the cost of the check is known. logs/s1_precondition_ggn.txt records the one",
+          "attempt: 250 of 2000 draws at the first of three lambdas after 16144 s, then killed. That log",
+          "bundles one-time setup with one chunk and cannot be decomposed, so the post-fix cost is",
+          "genuinely unknown and bounded above only at about 108 h. Writing this clause first is the point:",
+          "if the timing probe came back cheap the clause would be unnecessary, and if it came back",
+          "expensive the clause would be a rescue. It is written while the number is unavailable so that it",
+          "can be neither."
+        ]
+      },
+
+      "checker_blind_spot_disclosed": [
+        "ci/check_gate_ordering.py resolves a control to the EARLIEST commit containing its key, so these",
+        "clauses - filed inside the existing S-1 key, as categorical_sampler_amendment was - resolve to",
+        "a6d477e (2026-10-20) and are not themselves ordering-checked. That is sound here only because no",
+        "S-1 gate log exists on the day this is written, so every future S-1 log postdates both commits.",
+        "It would NOT be sound for a control whose logs already exist: there an amendment must be filed",
+        "under a new key or the check cannot see it. Recorded so the next amendment does not inherit the",
+        "assumption without the condition."
+      ]
     }
   },
   "C-8": {
