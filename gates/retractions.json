@@ -115,40 +115,33 @@
   ],
   "retracted_attributions": [
     {
-      "name": "davari-random-label-arm",
+      "name": "davari-probe-accuracy-numerals",
       "retracted": "2026-09-22",
+      "resolved_in_part": "2026-11-08",
       "recorded_in": "PROJECT.md",
       "patterns": [
-        "random-label arm",
-        "random label arm"
+        "70% versus 10%",
+        "70 percent versus 10 percent"
       ],
       "exempt": [
         "PROJECT.md",
         "gates/retractions.json"
       ],
       "reason": [
-        "An earlier entry credited Davari et al. (arXiv:2210.16156) with a random-label",
-        "memorization arm and linear-probe accuracies of roughly 70% versus 10%. The abstract",
-        "contains none of those and was checked directly. The paper body has not been read, so",
-        "the attribution is unverified. The general CKA-unreliability point stands on the",
-        "abstract alone and may still be cited."
-      ]
-    },
-    {
-      "name": "davari-venue-iclr-2023",
-      "retracted": "2026-09-22",
-      "recorded_in": "PROJECT.md",
-      "patterns": [
-        "ICLR 2023",
-        "International Conference on Learning Representations (ICLR 2023)"
-      ],
-      "exempt": [
-        "PROJECT.md",
-        "gates/retractions.json"
-      ],
-      "reason": [
-        "The venue was asserted without checking and has been dropped pending verification.",
-        "Cite the arXiv identifier until the venue is confirmed."
+        "This entry replaces davari-random-label-arm and davari-venue-iclr-2023, both",
+        "retracted on 2026-09-22 and both verified on 2026-11-08. What was verified, and how:",
+        "the random-label memorization arm is Section 4.1 of arXiv:2210.16156, which compares",
+        "a network trained to generalize on CIFAR10, a network trained to memorize it with",
+        "random target labels, and an untrained random network; the linear-probe comparison",
+        "across those three is Appendix B.6, Figure 16; and the ICLR 2023 venue is confirmed",
+        "from the ICLR 2023 programme page, not from arXiv, whose record for this paper",
+        "carries no venue field. Both claims may now be asserted.",
+        "",
+        "What remains retracted is narrower, and is why this entry exists rather than nothing:",
+        "the specific probe accuracies of roughly 70% versus 10%. Figure 16 plots them and",
+        "does not tabulate them, so the paper states no numeral and no one here has read",
+        "values off the plot. Cite the contrast qualitatively or cite the figure; do not state",
+        "the numbers."
       ]
     },
     {
