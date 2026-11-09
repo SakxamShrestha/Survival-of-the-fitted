@@ -1407,7 +1407,29 @@
           "absence. The permutation null carries the same imbalance, so the p-value remains valid.",
           "Both pair counts are reported beside the statistic."
         ],
-        "does_not_change": "No threshold, grid, statistic family, tail direction, permutation count or correction moves. This clause only says how the two arms the entry already names are assembled from the chains."
+        "does_not_change": "No threshold, grid, statistic family, tail direction, permutation count or correction moves. This clause only says how the two arms the entry already names are assembled from the chains.",
+        "same_permutation_means_same_scheme_not_same_stream": [
+          "Clarified 2026-11-08 on the day this clause was written, after the implementation raised it.",
+          "'Makes gate B's null the same permutation as gate A's' means the same permutation SCHEME -",
+          "the founder label is what moves, the survivor sets are what stay fixed - and NOT that the two",
+          "gates consume the same draws at the same seed. They do not: gate A permutes the label vector",
+          "in the order the chains arrive, and analysis/founder_overlap.py permutes the sorted label",
+          "multiset so that a logged null reproduces from the design summary rather than from the full",
+          "label vector. Both are uniform over the same set of relabelings, so the two nulls are",
+          "identical in distribution and independent in their draws. That is the intended reading, and",
+          "coupling the streams is NOT a fix to be applied later: two statistics reaching one conclusion",
+          "by independent draws is worth more than two reaching it by the same draws."
+        ],
+        "empty_set_hazard": [
+          "Recorded because the implementation found it and this clause did not name it. The project's",
+          "shared Jaccard treats two empty sets as similarity 1.0. If a chain's alphabet collapses",
+          "entirely, every pair in both arms reads 1.0, gate B's statistic reads exactly 0.0, and its",
+          "null is degenerate - a null result with the shape of a measurement. Nothing in gate B detects",
+          "this. What prevents it reaching the gate is headroom floor 1, which refuses gate A below a",
+          "mean surviving alphabet of 4.0 classes; so floor 1 is doing work for gate B that gate B's own",
+          "text never claims. Stated so that a future change to floor 1 is understood to move gate B's",
+          "protection too."
+        ]
       },
 
       "floor_3_has_no_referent_here": {
