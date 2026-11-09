@@ -1,0 +1,64 @@
+=== C-9: sklearn load_digits, DESCRIPTIVE AND UNGATED ===
+No gate, no threshold, no permutation null, no verdict. This arm can show whether a behaviour is visible on real data and nothing more.
+
+training pool : 1198 samples (split seed 9100, stratified)
+probe pool    : 599 samples held out, no model trains on it
+features 64, classes 10, scaled by 1/16.0
+
+FOUNDER ACCURACY, the two pools reported separately:
+  training pool (MEMORISATION)   : 1.0000
+  probe pool    (GENERALISATION) : 0.9733
+  Two different quantities on real data. Neither may be quoted as the other, and neither is a chain result.
+
+b128_absolute_match    seed 900  agree tr/pr 0.885/0.863  classes tr/pr 10/10  67s
+b128_absolute_match    seed 901  agree tr/pr 0.882/0.861  classes tr/pr 10/10  126s
+b128_absolute_match    seed 902  agree tr/pr 0.886/0.875  classes tr/pr 10/10  172s
+b128_absolute_match    seed 903  agree tr/pr 0.889/0.888  classes tr/pr 10/10  218s
+b128_absolute_match    seed 904  agree tr/pr 0.876/0.860  classes tr/pr 10/10  261s
+b37_ratio_match        seed 900  agree tr/pr 0.467/0.464  classes tr/pr 8/8  298s
+b37_ratio_match        seed 901  agree tr/pr 0.306/0.280  classes tr/pr 5/5  335s
+b37_ratio_match        seed 902  agree tr/pr 0.498/0.477  classes tr/pr 8/8  370s
+b37_ratio_match        seed 903  agree tr/pr 0.478/0.472  classes tr/pr 6/6  406s
+b37_ratio_match        seed 904  agree tr/pr 0.303/0.282  classes tr/pr 6/6  442s
+b1198_full_pool        seed 900  agree tr/pr 1.000/0.987  classes tr/pr 10/10  498s
+b1198_full_pool        seed 901  agree tr/pr 1.000/0.987  classes tr/pr 10/10  554s
+b1198_full_pool        seed 902  agree tr/pr 1.000/0.985  classes tr/pr 10/10  610s
+b1198_full_pool        seed 903  agree tr/pr 1.000/0.985  classes tr/pr 10/10  670s
+b1198_full_pool        seed 904  agree tr/pr 1.000/0.987  classes tr/pr 10/10  732s
+
+=== generation 25, 5 chains per condition (description, not a comparison) ===
+
+b128_absolute_match  B = 128  (absolute: the synthetic headline condition's own B)
+  train  agree_gen0     0.884 sd 0.005 [0.876, 0.889] (n=5)
+  train  eff_rank       5.234 sd 0.112 [5.053, 5.338] (n=5)
+  train  n_classes_used 10.000 sd 0.000 [10.000, 10.000] (n=5)
+  train  acc_true       0.884 sd 0.005 [0.876, 0.889] (n=5)
+  probe  agree_gen0     0.869 sd 0.012 [0.860, 0.888] (n=5)
+  probe  eff_rank       5.192 sd 0.118 [4.993, 5.284] (n=5)
+  probe  n_classes_used 10.000 sd 0.000 [10.000, 10.000] (n=5)
+  probe  acc_true       0.865 sd 0.012 [0.856, 0.880] (n=5)
+
+b37_ratio_match  B = 37  (ratio: 0.0312 of this pool, as 128/4096 is of 4096)
+  train  agree_gen0     0.411 sd 0.097 [0.303, 0.498] (n=5)
+  train  eff_rank       3.893 sd 0.457 [3.298, 4.387] (n=5)
+  train  n_classes_used 6.600 sd 1.342 [5.000, 8.000] (n=5)
+  train  acc_true       0.411 sd 0.097 [0.303, 0.498] (n=5)
+  probe  agree_gen0     0.395 sd 0.104 [0.280, 0.477] (n=5)
+  probe  eff_rank       3.894 sd 0.440 [3.274, 4.350] (n=5)
+  probe  n_classes_used 6.600 sd 1.342 [5.000, 8.000] (n=5)
+  probe  acc_true       0.397 sd 0.101 [0.284, 0.479] (n=5)
+
+b1198_full_pool  B = 1198  (no bottleneck)
+  train  agree_gen0     1.000 sd 0.000 [1.000, 1.000] (n=5)
+  train  eff_rank       6.610 sd 0.096 [6.490, 6.739] (n=5)
+  train  n_classes_used 10.000 sd 0.000 [10.000, 10.000] (n=5)
+  train  acc_true       1.000 sd 0.000 [1.000, 1.000] (n=5)
+  probe  agree_gen0     0.986 sd 0.001 [0.985, 0.987] (n=5)
+  probe  eff_rank       6.513 sd 0.097 [6.398, 6.631] (n=5)
+  probe  n_classes_used 10.000 sd 0.000 [10.000, 10.000] (n=5)
+  probe  acc_true       0.970 sd 0.001 [0.968, 0.972] (n=5)
+
+The three conditions are not tested against one another. The absolute match and the ratio match
+are two unresolved readings of the same synthetic condition, and neither is privileged.
+
+wall 732.7s; wrote logs/c9_digits_descriptive.json and logs/c9_digits_descriptive.txt

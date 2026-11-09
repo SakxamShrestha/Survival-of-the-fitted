@@ -535,6 +535,184 @@ def fig_rank_vs_alphabet():
     save(fig, "fig10_rank_vs_alphabet.png")
 
 
+def fig_s1_inertness():
+    """S-1's inertness precondition: five cells pass, one fails, and not where expected.
+
+    Draw-to-draw disagreement per (lambda, sigma) cell against the maximizer's
+    own seed-to-seed disagreement, all on the HELD-OUT PROBE POOL at probe seed
+    9000, read from logs/s1_precondition_inertness.json. The check is one-sided
+    and non-overlapping: a cell passes only if its interval sits clear of the
+    maximizer band, because a sampler whose draws vary less than ordinary
+    training does is not sampling. Both readings the rule admits are plotted,
+    since it does not say whether the sampler's randomness includes the MAP
+    pass's initialisation. The failing cell is lambda = 100 at the layerwise
+    initialisation scale; lambda = 100 at four times that scale passes at 0.868,
+    which is why the failure is read as a lambda-by-sigma interaction and not as
+    large lambda approaching the maximizer.
+    """
+    with open(os.path.join(LOGS, "s1_precondition_inertness.json")) as handle:
+        d = json.load(handle)
+
+    base = d["maximizer"]
+    cells = d["cells"]
+    if len(cells) != 6:
+        raise SystemExit("expected the six committed cells")
+
+    # Committed cell order is lambda-major; plot smallest lambda at the top so
+    # the axis reads as "weaker prior trust downwards".
+    rows = sorted(cells, key=lambda c: (c["sigma_multiplier"], c["lambda"]))
+    labels = [f"$\\lambda$ = {int(c['lambda'])}, $\\sigma$ x{int(c['sigma_multiplier'])}"
+              for c in rows]
+    y = list(range(len(rows)))
+
+    fig, ax = plt.subplots(figsize=(7.4, 4.6))
+    lo, hi = base["ci95"]
+    ax.axvspan(lo, hi, color=MUTED, alpha=0.22, linewidth=0)
+    ax.axvline(base["mean"], color=MUTED, linewidth=1.1, linestyle=(0, (4, 3)))
+
+    readings = (("fixed_map", CAT[0], -0.13, "sampler randomness only"),
+                ("per_draw_map", CAT[3], 0.13, "MAP pass also reseeded"))
+    for key, color, offset, label in readings:
+        means = [c[key]["mean"] for c in rows]
+        err = [[c[key]["mean"] - c[key]["ci95"][0] for c in rows],
+               [c[key]["ci95"][1] - c[key]["mean"] for c in rows]]
+        ax.errorbar(means, [v + offset for v in y], xerr=err, fmt="o",
+                    markersize=5.5, color=color, ecolor=color, elinewidth=1.6,
+                    capsize=3, label=label)
+
+    failing = [i for i, c in enumerate(rows)
+               if not c["fixed_map"]["exceeds_maximizer_non_overlapping"]]
+    for i in failing:
+        ax.axhspan(i - 0.42, i + 0.42, color=CAT[1], alpha=0.10, linewidth=0)
+        ax.annotate("fails: draws vary less than ordinary training does",
+                    (rows[i]["fixed_map"]["ci95"][1] + 0.03, i - 0.30),
+                    fontsize=8.5, color=CAT[1], ha="left", va="center")
+
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels, fontsize=9.5, color=INK)
+    ax.set_ylim(-0.6, len(rows) - 0.4)
+    ax.set_xlim(0, 1.0)
+    ax.invert_yaxis()
+    style(ax, "draw-to-draw disagreement on the probe pool (n = 20 pairs)", "",
+          "Five cells sample; one does not, and not the one the design predicts")
+    ax.annotate(f"maximizer seed-to-seed, {base['mean']:.4f}",
+                (base["mean"] - 0.015, 0.025), xycoords=("data", "axes fraction"),
+                fontsize=8.5, color=MUTED, ha="right", va="bottom")
+    legend = ax.legend(fontsize=9, labelcolor=INK, loc="upper left",
+                       frameon=True, facecolor="white", edgecolor="none",
+                       framealpha=0.92)
+    legend.get_frame().set_linewidth(0)
+    save(fig, "fig11_s1_inertness.png")
+
+def fig_structured_vs_noise():
+    """Does the alphabet contract because the labels were random? No.
+
+    Two chains at the same condition -- tau 1.0, B = 128, seed 0, TRAINING POOL
+    -- differing only in generation 0's labels. "noise" draws them uniformly at
+    random, so the founder memorises an arbitrary table. "structured" makes them
+    a deterministic compositional function of two of the five attributes, so the
+    founder learns a rule that generalises. Read from logs/tau1.0_b128.jsonl and
+    logs/structured_tau1.0_b128.jsonl.
+
+    The two alphabets end within one class of each other, while the agreement
+    curves start an order of magnitude apart. The contraction therefore does not
+    depend on there being nothing to learn. n = 1 chain per arm: the pilot runs
+    one chain per condition, so neither curve carries an interval and nothing
+    here is gated.
+    """
+    def rows(name):
+        with open(os.path.join(LOGS, name)) as handle:
+            return [json.loads(line) for line in handle]
+
+    noise = rows("tau1.0_b128.jsonl")
+    struct = rows("structured_tau1.0_b128.jsonl")
+    if len(noise) != len(struct):
+        raise SystemExit("the two pilot logs cover different generation counts")
+    gens = [r["gen"] for r in noise]
+
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(10.6, 4.3))
+
+    ax.plot(gens, [r["n_classes_used"] for r in struct], color=CAT[2], linewidth=2,
+            label="structured (compositional labels)")
+    ax.plot(gens, [r["n_classes_used"] for r in noise], color=CAT[1], linewidth=2,
+            label="noise (random labels)")
+    ax.set_ylim(0, N_CLASSES)
+    ax.set_xlim(1, len(gens))
+    style(ax, "generation", f"surviving classes of {N_CLASSES} (training pool)",
+          "The alphabet contracts either way")
+    legend = ax.legend(fontsize=9, labelcolor=INK, loc="lower left", frameon=False)
+
+    bx.plot(gens, [r["agree_gen0"] for r in struct], color=CAT[2], linewidth=2,
+            label="structured")
+    bx.plot(gens, [r["agree_gen0"] for r in noise], color=CAT[1], linewidth=2,
+            label="noise")
+    bx.axhline(CHANCE, color=MUTED, linewidth=1.1, linestyle=(0, (4, 3)))
+    bx.annotate(f"chance, {CHANCE:.3f}", (len(gens) - 0.4, CHANCE + 0.015),
+                fontsize=8.5, color=MUTED, ha="right", va="bottom")
+    bx.set_ylim(0, 1.0)
+    bx.set_xlim(1, len(gens))
+    style(bx, "generation", "agreement with the founder (training pool)",
+          "but it starts from completely different places")
+    bx.legend(fontsize=9, labelcolor=INK, loc="upper right", frameon=False)
+
+    fig.tight_layout()
+    save(fig, "fig12_structured_vs_noise.png")
+
+def fig_digits_real_data():
+    """C-9: the chain on real digits, and the bottleneck reading that decides it.
+
+    Five chains per condition from one shared founder, HELD-OUT PROBE POOL, read
+    from logs/c9_digits_descriptive.json. The synthetic headline condition sends
+    128 of 4096 points per generation, which is 3.1%; on this 1198-point pool
+    128 is 10.7%, so matching the count and matching the fraction are different
+    experiments and both are plotted. They disagree, and the disagreement is the
+    result: at the matched COUNT the alphabet does not move, at the matched
+    FRACTION a third of it goes. Shaded bands are the spread across the five
+    chains, which is bottleneck-selection variation from one founder and nothing
+    wider. Descriptive and ungated: no rule was committed for this arm, so no
+    condition here is tested against another.
+    """
+    with open(os.path.join(LOGS, "c9_digits_descriptive.json")) as handle:
+        d = json.load(handle)
+
+    n_cls = d["pools"]["n_classes"] if "n_classes" in d.get("pools", {}) else 10
+    order = {"b1198_full_pool": 0, "b128_absolute_match": 1, "b37_ratio_match": 2}
+    label = {
+        "b1198_full_pool": "no bottleneck (B = 1198)",
+        "b128_absolute_match": "matched count (B = 128, 10.7% of pool)",
+        "b37_ratio_match": "matched fraction (B = 37, 3.1% of pool)",
+    }
+    colour = {"b1198_full_pool": MUTED, "b128_absolute_match": CAT[0],
+              "b37_ratio_match": CAT[1]}
+
+    res = sorted(d["results"], key=lambda r: order.get(r["condition"], 99))
+    gens = [row["gen"] for row in res[0]["chains"][0]["rows"]]
+
+    fig, ax = plt.subplots(figsize=(7.4, 4.6))
+    for r in res:
+        series = [[row["probe"]["n_classes_used"] for row in ch["rows"]]
+                  for ch in r["chains"]]
+        mean = [sum(s[i] for s in series) / len(series) for i in range(len(gens))]
+        lo = [min(s[i] for s in series) for i in range(len(gens))]
+        hi = [max(s[i] for s in series) for i in range(len(gens))]
+        col = colour[r["condition"]]
+        ax.fill_between(gens, lo, hi, color=col, alpha=0.15, linewidth=0)
+        # The two ten-class conditions sit exactly on top of each other, so the
+        # no-bottleneck reference is dashed and drawn last rather than hidden.
+        dashed = r["condition"] == "b1198_full_pool"
+        ax.plot(gens, mean, color=col, linewidth=2.6 if dashed else 2,
+                linestyle=(0, (5, 3)) if dashed else "-",
+                zorder=5 if dashed else 3, label=label[r["condition"]])
+
+    ax.set_xlim(1, len(gens))
+    ax.set_ylim(0, n_cls + 0.5)
+    style(ax, "generation", f"surviving classes of {n_cls} (held-out probe pool)",
+          "On real digits, which bottleneck you match decides the answer")
+    legend = ax.legend(fontsize=9, labelcolor=INK, loc="lower left", frameon=True,
+                       facecolor="white", edgecolor="none", framealpha=0.92)
+    legend.get_frame().set_linewidth(0)
+    save(fig, "fig13_digits_real_data.png")
+
 if __name__ == "__main__":
     fig_train_vs_probe()
     fig_cka_blindness()
@@ -546,3 +724,6 @@ if __name__ == "__main__":
     fig_sampler_exactness()
     fig_c8b_three_arms()
     fig_rank_vs_alphabet()
+    fig_s1_inertness()
+    fig_structured_vs_noise()
+    fig_digits_real_data()

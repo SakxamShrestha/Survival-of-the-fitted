@@ -706,8 +706,14 @@ def run_chain(arm, founder, X, n_classes, lam, mult, chain_seed, gens, bottlenec
         gen_times.append(round(time.time() - t0, 2))
         print(f"    gen {g + 1:2d}  alphabet {sizes[-1]:2d}  ({gen_times[-1]:.1f}s)", flush=True)
     survivors = sorted(int(c) for c in teacher(X).argmax(-1).unique().tolist())
+    # The gates and headroom floor 1 are read on the probe pool
+    # (design_amendment_2026_11_08.pool_for_gates_and_floor_1), so the probe pool's
+    # survivor SET is recorded and not only its size.
+    probe_survivors = (None if Xp is None else
+                       sorted(int(c) for c in teacher(Xp).argmax(-1).unique().tolist()))
     return {"arm": arm, "lambda": lam, "sigma_multiplier": mult, "chain_seed": chain_seed,
             "sizes": sizes, "probe_sizes": probe_sizes, "survivors": survivors,
+            "probe_survivors": probe_survivors,
             "final": sizes[-1], "diagnostics": diags, "gen_times": gen_times,
             "prior_sds": sds, "p_drop": p_drop}
 
