@@ -169,7 +169,11 @@ the founder's generation-0 predicted class frequency on its own predicts how lon
 survives, at a rank correlation of 0.4721. Frequent classes survive, and two chains from one
 founder inherit the same frequencies. Until the overlap above is measured against a null that
 holds those frequencies fixed, the measurement stands but must not be presented as evidence
-of founder identity. The null is specified and written; it has not been run.
+of founder identity. The null is specified and written. It has since been run, as control
+C-4O, and it returned NOT EVALUABLE: the frequency-matched comparison could not separate
+itself from the uniform one by the margin its own rule required, so it refused rather than
+answering. The qualification above therefore still stands, and stands for the same reason —
+not because the comparison was never attempted, but because the attempt could not see.
 
 That 0.93x for the different-founder arm is measured against an empirical null, which redraws
 random subsets at each run's own survivor-set size. Measured against the analytic null

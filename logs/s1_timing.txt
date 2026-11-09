@@ -1,0 +1,61 @@
+=== S-1 timing: one 25-generation chain per arm, lambda 100, sigma x4 ===
+founder pool seed 0 acc 0.977294921875; torch threads 4
+NOT a gate and NOT a sweep cell: one chain per arm, for the wall-time projection only.
+
+  sampler:
+    gen  1  alphabet 48  (25.4s)
+    gen  2  alphabet 45  (20.6s)
+    gen  3  alphabet 42  (20.7s)
+    gen  4  alphabet 41  (19.9s)
+    gen  5  alphabet 42  (22.9s)
+    gen  6  alphabet 45  (20.8s)
+    gen  7  alphabet 40  (19.7s)
+    gen  8  alphabet 42  (19.1s)
+    gen  9  alphabet 41  (22.1s)
+    gen 10  alphabet 40  (19.4s)
+    gen 11  alphabet 37  (19.3s)
+    gen 12  alphabet 34  (22.3s)
+    gen 13  alphabet 33  (24.0s)
+    gen 14  alphabet 30  (21.5s)
+    gen 15  alphabet 30  (19.9s)
+    gen 16  alphabet 34  (22.5s)
+    gen 17  alphabet 32  (19.5s)
+    gen 18  alphabet 33  (22.7s)
+    gen 19  alphabet 36  (21.7s)
+    gen 20  alphabet 37  (24.3s)
+    gen 21  alphabet 38  (24.6s)
+    gen 22  alphabet 34  (19.6s)
+    gen 23  alphabet 39  (19.3s)
+    gen 24  alphabet 37  (21.1s)
+    gen 25  alphabet 40  (21.0s)
+  sampler: 534.0 s for 25 generations; final alphabet 40
+
+  dropout:
+    gen  1  alphabet 48  (6.5s)
+    gen  2  alphabet 38  (6.5s)
+    gen  3  alphabet 33  (6.5s)
+    gen  4  alphabet 25  (7.3s)
+    gen  5  alphabet 23  (7.0s)
+    gen  6  alphabet 23  (6.4s)
+    gen  7  alphabet 22  (6.3s)
+    gen  8  alphabet 23  (7.2s)
+    gen  9  alphabet 22  (6.6s)
+    gen 10  alphabet 20  (6.3s)
+    gen 11  alphabet 18  (6.3s)
+    gen 12  alphabet 21  (6.3s)
+    gen 13  alphabet 21  (7.5s)
+    gen 14  alphabet 19  (6.6s)
+    gen 15  alphabet 16  (6.9s)
+    gen 16  alphabet 15  (6.9s)
+    gen 17  alphabet 15  (7.4s)
+    gen 18  alphabet 11  (6.9s)
+    gen 19  alphabet  8  (7.6s)
+    gen 20  alphabet  8  (9.0s)
+    gen 21  alphabet  9  (7.7s)
+    gen 22  alphabet  8  (9.5s)
+    gen 23  alphabet  8  (7.2s)
+    gen 24  alphabet 10  (6.9s)
+    gen 25  alphabet 10  (7.8s)
+  dropout: 177.0 s for 25 generations; final alphabet 10
+
+wrote logs/s1_timing.json
