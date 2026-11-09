@@ -73,6 +73,62 @@ GATE_NOT_EVALUABLE = NOT_EVALUABLE
 PRECONDITION_VERDICTS = ("PASS", "BROKEN", "UNRUN")
 INERTNESS_VERDICTS = PRECONDITION_VERDICTS + ("READING-DEPENDENT",)
 
+# ---- the two committed readings of the inertness precondition ---------------
+#
+# Two texts in gates/thresholds.json disagree about what ONE failing inertness
+# cell means, and both were committed before the precondition ran:
+#
+#   :999  precondition_inertness          a6d477e, 2026-10-20
+#         "The arm is declared BROKEN, and NO gate below is read, unless the
+#         sampler's draw-to-draw disagreement exceeds the maximizer's ..."
+#         Singular. It has no per-cell notion, so any failure kills every gate.
+#
+#   :1347 inertness_scope.aggregation     ed850d8, 2026-11-08
+#         "A cell that fails is named, no gate is read on it, and the
+#         combination rule's PARTIAL applies with the refused cells listed."
+#
+# ed850d8 added the second without editing the first and nothing in the file
+# records precedence between them. Choosing the per-cell reading now, with the
+# run already in hand and the strict reading costing five passing cells, is
+# indistinguishable from motivated reasoning to anyone reading the commits
+# later. So this module reports both and resolves neither - the same treatment
+# CLAUDE.md requires for the 1.99x / 2.12x pair. The scalar `verdict` keys stay
+# on the strict reading throughout, because it is the conservative one and
+# because every caller written before today reads them.
+READING_STRICT = "strict_precondition_as_committed"
+READING_PER_CELL = "per_cell_amendment"
+INERTNESS_READINGS = (READING_STRICT, READING_PER_CELL)
+
+# RULE_COMMITTED above is a bare date and the entry has no hash field, so the
+# commit each reading comes from is recorded here and printed with the verdict.
+READING_SOURCES = {
+    READING_STRICT: {
+        "source": "gates/thresholds.json:999 precondition_inertness",
+        "source_commit": "a6d477e",
+        "committed": "2026-10-20",
+        "reading": ("any verdict-bearing cell failing declares the arm BROKEN "
+                    "and no gate is read"),
+    },
+    READING_PER_CELL: {
+        "source": "gates/thresholds.json:1347 inertness_scope.aggregation",
+        "source_commit": "ed850d8",
+        "committed": "2026-11-08",
+        "reading": ("a failing cell is named and refused, no gate is read on "
+                    "it, and PARTIAL applies while any cell passes"),
+    },
+}
+
+# The per-cell reading can return PARTIAL, which is not an inertness verdict
+# under the vocabulary a6d477e fixed. It is kept in its own tuple rather than
+# added to INERTNESS_VERDICTS, because INERTNESS_VERDICTS is what validates the
+# verdict the arm acts on and that stays the strict one.
+INERTNESS_PER_CELL_VERDICTS = INERTNESS_VERDICTS + (PARTIAL,)
+
+# Everything under this key is an observation written after the data were seen.
+# verdict_bearing_view() strips it before any verdict is decided; see its
+# docstring for why that is a removal and not a convention.
+DIAGNOSTIC_KEY = "diagnostic_non_gating"
+
 EXACTNESS = "precondition_sampler_exactness"
 GGN = "precondition_categorical_ggn_exactness"
 INERTNESS = "precondition_inertness"
@@ -628,8 +684,84 @@ def coverage(cells):
 
 # ============================================================== preconditions
 
+def verdict_bearing_view(detail):
+    """`detail` with the non-gating diagnostic removed, for the verdict path.
+
+    The diagnostic under DIAGNOSTIC_KEY was written after the inertness run was
+    read, so it cannot be allowed to decide anything: a quantity chosen with
+    the answer already visible is not evidence. Writing "do not branch on it"
+    in a comment would leave that as a convention, and a later edit would break
+    it silently. Instead every function that decides a verdict takes this view,
+    which is a fresh dict with that key dropped, so the diagnostic is not
+    reachable from any verdict branch at all - there is nothing to be
+    disciplined about. The full detail, diagnostic included, is carried into
+    the verdict dict and the report, where it is an observation and labelled as
+    one.
+    """
+    if not isinstance(detail, dict):
+        return detail
+    return {key: value for key, value in detail.items() if key != DIAGNOSTIC_KEY}
+
+
+def draw_to_draw_by_lambda(cells):
+    """Fixed-MAP disagreement means per sigma, ordered by ascending lambda.
+
+    Observation only, and the module keeps it out of the verdict path on
+    purpose; see verdict_bearing_view. What it records is whether disagreement
+    falls monotonically in lambda within a sigma, which is what separates a
+    lambda-by-sigma interaction from a sampler that stops sampling once lambda
+    is large: an interaction shows the fall at one sigma and not the other.
+
+    The means are read from the cells rather than restated, so nothing here is
+    a number this file asserts. A sigma with fewer than two cells, or a cell
+    with no logged mean, leaves `monotone_falling_in_lambda` None - undefined
+    rather than guessed.
+    """
+    groups = {}
+    for cell in cells:
+        mult = float(cell["sigma_multiplier"])
+        mean = cell.get("fixed_map", {}).get("mean")
+        groups.setdefault(mult, []).append(
+            (float(cell["lambda"]), None if mean is None else float(mean)))
+    out = []
+    for mult in sorted(groups, reverse=True):
+        ordered = sorted(groups[mult])
+        lams = [lam for lam, _ in ordered]
+        means = [mean for _, mean in ordered]
+        if len(means) < 2 or any(mean is None for mean in means):
+            monotone = None
+        else:
+            monotone = all(b < a for a, b in zip(means, means[1:]))
+        out.append({"sigma_multiplier": mult, "lambda_ascending": lams,
+                    "means": means, "monotone_falling_in_lambda": monotone})
+    return out
+
+
+def _inertness_diagnostic(cells):
+    return {
+        "draw_to_draw_by_lambda": draw_to_draw_by_lambda(cells),
+        "written": "2026-11-08, after the inertness run was read",
+        "status": ("observation only: written with the data already in hand, so "
+                   "it decides nothing. It is removed from the verdict path by "
+                   "verdict_bearing_view rather than merely unused there."),
+        "reads": ("cells[i]['fixed_map']['mean'], the draw-to-draw disagreement "
+                  "on the probe pool at probe_seed 9000"),
+    }
+
+
+def _readings_from_cell_verdicts(strict, per_cell, refused_cells):
+    readings = {}
+    for name, verdict in ((READING_STRICT, strict), (READING_PER_CELL, per_cell)):
+        entry = dict(READING_SOURCES[name])
+        entry["verdict"] = verdict
+        if name == READING_PER_CELL:
+            entry["refused_cells"] = list(refused_cells)
+        readings[name] = entry
+    return readings
+
+
 def read_inertness(payload):
-    """The inertness verdict, re-derived from its own cells where they are there.
+    """The inertness verdict, re-derived from its own cells, under both readings.
 
     inertness_scope fixes the verdict-bearing reading as the fixed-MAP one and
     defines READING-DEPENDENT as "the verdict-bearing reading passed on every
@@ -638,13 +770,32 @@ def read_inertness(payload):
     covers the opposite case - verdict-bearing failing somewhere while
     per-draw-MAP passes - and the amendment makes that BROKEN. Both readings
     are reported; the disagreement is named, not resolved silently.
+
+    Two further verdicts are returned beside that one, for the two committed
+    texts documented at READING_SOURCES above:
+
+      verdict_strict    a6d477e: any verdict-bearing cell failing is BROKEN.
+      verdict_per_cell  ed850d8: the failing cells are named and refused,
+                        PARTIAL stands while any cell passes, and BROKEN is
+                        reached only when none does.
+
+    `verdict` keeps the strict value it has always had. The addition is
+    additive on purpose: no caller written before today changes meaning, and
+    the conservative reading stays the one the arm acts on.
     """
     logged = payload.get("verdict") if isinstance(payload, dict) else payload
     cells = payload.get("cells") if isinstance(payload, dict) else None
     if not cells:
+        # No cells to read per cell, so the two readings cannot differ: both
+        # carry the logged verdict, and that is said rather than left implied.
         return {"verdict": logged, "verdict_logged": logged,
                 "verdict_from_cells": None, "agrees_with_log": True,
-                "failing_cells_verdict_bearing": [], "failing_cells_per_draw_map": []}
+                "verdict_strict": logged, "verdict_per_cell": logged,
+                "readings": _readings_from_cell_verdicts(logged, logged, []),
+                "failing_cells_verdict_bearing": [], "failing_cells_per_draw_map": [],
+                "refused_cells_verdict_bearing": [], "refused_cell_names": [],
+                "n_cells": 0, "n_cells_passing_verdict_bearing": 0,
+                DIAGNOSTIC_KEY: _inertness_diagnostic([])}
 
     def failing(reading):
         return [[float(c["lambda"]), float(c["sigma_multiplier"])] for c in cells
@@ -652,15 +803,40 @@ def read_inertness(payload):
 
     fixed_bad, full_bad = failing("fixed_map"), failing("per_draw_map")
     if fixed_bad:
-        derived = "BROKEN"
+        strict = "BROKEN"
     elif full_bad:
-        derived = "READING-DEPENDENT"
+        strict = "READING-DEPENDENT"
     else:
-        derived = "PASS"
-    return {"verdict": derived, "verdict_logged": logged, "verdict_from_cells": derived,
-            "agrees_with_log": derived == logged,
+        strict = "PASS"
+
+    n_passing = len(cells) - len(fixed_bad)
+    if not fixed_bad:
+        # Nothing to refuse, so ed850d8 says exactly what a6d477e says.
+        per_cell = strict
+    elif n_passing == 0:
+        per_cell = "BROKEN"
+    else:
+        per_cell = PARTIAL
+
+    if per_cell not in INERTNESS_PER_CELL_VERDICTS:
+        raise ValueError(f"per-cell inertness verdict {per_cell!r} is not one of "
+                         f"{INERTNESS_PER_CELL_VERDICTS}")
+
+    refused = fixed_bad if per_cell == PARTIAL else []
+    return {"verdict": strict, "verdict_logged": logged, "verdict_from_cells": strict,
+            "agrees_with_log": strict == logged,
+            "verdict_strict": strict, "verdict_per_cell": per_cell,
+            "readings": _readings_from_cell_verdicts(strict, per_cell, refused),
             "failing_cells_verdict_bearing": fixed_bad,
-            "failing_cells_per_draw_map": full_bad}
+            "failing_cells_per_draw_map": full_bad,
+            # Refused is not the same list as failing: under the strict reading
+            # nothing is refused because nothing is read. It is also not
+            # coverage - coverage_from_cell_keys counts founders and a cell
+            # refused for inertness is not a cell that failed to complete.
+            "refused_cells_verdict_bearing": refused,
+            "refused_cell_names": [_cell_name(cell) for cell in refused],
+            "n_cells": len(cells), "n_cells_passing_verdict_bearing": n_passing,
+            DIAGNOSTIC_KEY: _inertness_diagnostic(cells)}
 
 
 def _precondition_verdict(value, name, allowed):
@@ -685,10 +861,93 @@ def consequences_from_rule(rule_path=RULE_PATH):
             for name in GATE_NAMES}
 
 
+def _combination_readings(*, strict_verdict, inertness_view, preconditions,
+                          withdrawn=False):
+    """The arm's verdict under each of the two committed inertness texts.
+
+    The strict entry carries the arm's scalar verdict, which is the strict
+    reading by construction. The per-cell entry says what ed850d8's text
+    implies for the same run, and its `consequence` is the sentence any
+    downstream statement has to carry beside the strict one.
+
+    Three things the per-cell reading does not do, each of which would be an
+    over-claim. It does not rescue an arm broken by a different precondition,
+    because it is a reading of the inertness entry only. It does not survive an
+    MC dropout reproduction, which withdraws every verdict regardless. And it
+    does not report gate verdicts on the surviving cells: this call read its
+    gates on the coverage it was given, under the strict text, and reading them
+    on a subset is a separate aggregation restricted to those cells.
+    """
+    detail = inertness_view if isinstance(inertness_view, dict) else None
+    per_cell_inertness = (detail or {}).get("verdict_per_cell") \
+        or preconditions[INERTNESS]
+    refused = list((detail or {}).get("refused_cells_verdict_bearing") or [])
+    refused_names = list((detail or {}).get("refused_cell_names") or [])
+    n_passing = (detail or {}).get("n_cells_passing_verdict_bearing")
+    other_broken = [name for name in (EXACTNESS, GGN)
+                    if preconditions[name] == "BROKEN"]
+
+    if withdrawn:
+        per_cell_verdict = WITHDRAWN
+        consequence = ("MC dropout reproduced the arm's result, so every verdict is "
+                       "withdrawn under this reading as well as under the strict one.")
+        refused = []
+    elif other_broken:
+        per_cell_verdict = BROKEN
+        consequence = (f"{', '.join(other_broken)} failed, which breaks the arm under "
+                       "either reading of the inertness precondition: this reading "
+                       "refuses cells, it does not excuse a different precondition.")
+        refused = []
+    elif per_cell_inertness == BROKEN:
+        per_cell_verdict = BROKEN
+        consequence = ("no cell passes the verdict-bearing reading, so this reading "
+                       "and the strict one agree: the arm is BROKEN and no gate is "
+                       "read.")
+        refused = []
+    elif per_cell_inertness == PARTIAL:
+        per_cell_verdict = PARTIAL
+        consequence = (
+            f"refused for inertness: {', '.join(refused_names) or 'none'}. No gate "
+            f"is read on the refused cells, and the remaining "
+            f"{'unknown number of' if n_passing is None else n_passing} carry "
+            "PARTIAL. No gate verdict is carried under this reading: the gates in "
+            "this verdict were read, or refused, under the strict text, and reading "
+            "them on the surviving cells is a separate aggregation restricted to "
+            "those cells.")
+    else:
+        per_cell_verdict = strict_verdict
+        consequence = ("no cell fails the verdict-bearing reading, so the two "
+                       f"committed texts agree on {strict_verdict}.")
+
+    if per_cell_inertness == PARTIAL and not withdrawn and not other_broken:
+        strict_consequence = (
+            "the arm is BROKEN and no gate is read, on the strength of a single "
+            "failing cell; the passing cells are not read.")
+    elif strict_verdict == BROKEN:
+        strict_consequence = ("the arm is BROKEN, no gate is read, and "
+                              f"{NO_TRANSFER_STATEMENT}.")
+    else:
+        strict_consequence = (f"the arm's verdict is {strict_verdict} on the gates "
+                              "and coverage read above.")
+
+    readings = {}
+    for name, verdict, text in ((READING_STRICT, strict_verdict, strict_consequence),
+                                (READING_PER_CELL, per_cell_verdict, consequence)):
+        entry = dict(READING_SOURCES[name])
+        entry["verdict"] = verdict
+        entry["consequence"] = text
+        if name == READING_PER_CELL:
+            entry["refused_cells"] = refused
+            entry["refused_cell_names"] = refused_names if refused else []
+        readings[name] = entry
+    return readings
+
+
 def _broken(broken_by, preconditions, coverage_info, mc_dropout_reproduced,
-            warnings, inertness_detail):
+            warnings, inertness_detail, verdict_readings):
     return {"control": "S-1", "rule_committed": RULE_COMMITTED,
             "verdict": BROKEN, "verdict_before_withdrawal": None,
+            "verdict_readings": verdict_readings,
             "alpha": ALPHA, "preconditions": preconditions,
             "inertness_detail": inertness_detail,
             "broken_by": list(broken_by), "transfer_statement_permitted": False,
@@ -715,10 +974,13 @@ def combine(*, exactness, inertness, ggn, gate_readings, coverage_info,
     read with the required wording stamped on them.
     """
     inertness_detail = inertness if isinstance(inertness, dict) else None
+    # Every decision below reads the view, not the detail: the view has the
+    # after-the-fact diagnostic removed, so no verdict branch can see it.
+    inertness_view = verdict_bearing_view(inertness)
     preconditions = {
         EXACTNESS: _precondition_verdict(exactness, EXACTNESS, PRECONDITION_VERDICTS),
         GGN: _precondition_verdict(ggn, GGN, PRECONDITION_VERDICTS),
-        INERTNESS: _precondition_verdict(inertness, INERTNESS, INERTNESS_VERDICTS),
+        INERTNESS: _precondition_verdict(inertness_view, INERTNESS, INERTNESS_VERDICTS),
     }
     warnings = []
 
@@ -735,16 +997,34 @@ def combine(*, exactness, inertness, ggn, gate_readings, coverage_info,
                 "Needed: either a run of that precondition, or a decision filed in "
                 "gates/thresholds.json before any gate is read.")
 
-    if inertness_detail and not inertness_detail.get("agrees_with_log", True):
+    detail_view = inertness_view if isinstance(inertness_view, dict) else None
+    if detail_view and not detail_view.get("agrees_with_log", True):
         warnings.append(
             f"{INERTNESS} disagrees with its own cells: the log reads "
-            f"{inertness_detail['verdict_logged']!r} and the cells give "
-            f"{inertness_detail['verdict_from_cells']!r} under "
+            f"{detail_view['verdict_logged']!r} and the cells give "
+            f"{detail_view['verdict_from_cells']!r} under "
             "inertness_scope.reading_dependent. Both are reported; neither is dropped.")
 
     broken_by = [name for name in (EXACTNESS, INERTNESS, GGN)
                  if preconditions[name] == "BROKEN"]
     if broken_by:
+        readings = _combination_readings(
+            strict_verdict=BROKEN, inertness_view=inertness_view,
+            preconditions=preconditions)
+        other = readings[READING_PER_CELL]
+        if other["verdict"] != BROKEN:
+            warnings.append(
+                f"The two committed readings of {INERTNESS} disagree on this run. "
+                f"{READING_STRICT} ({READING_SOURCES[READING_STRICT]['source']}, "
+                f"{READING_SOURCES[READING_STRICT]['source_commit']}) gives "
+                f"{BROKEN!r}: {readings[READING_STRICT]['consequence']} "
+                f"{READING_PER_CELL} "
+                f"({READING_SOURCES[READING_PER_CELL]['source']}, "
+                f"{READING_SOURCES[READING_PER_CELL]['source_commit']}) gives "
+                f"{other['verdict']!r}: {other['consequence']} The later text did "
+                "not edit the earlier one and the file records no precedence "
+                "between them, so both are reported and neither is resolved. The "
+                "scalar verdict stays on the strict reading.")
         warnings.append(
             f"{', '.join(broken_by)} failed: the arm is BROKEN, no gate is read, and "
             f"{NO_TRANSFER_STATEMENT}. A BROKEN verdict is reported as BROKEN; it is "
@@ -760,7 +1040,7 @@ def combine(*, exactness, inertness, ggn, gate_readings, coverage_info,
                 "MC dropout reproduced the finding, recorded but not applied: the arm is "
                 "BROKEN, no gate was read, and there is no verdict to withdraw.")
         return _broken(broken_by, preconditions, coverage_info, mc_dropout_reproduced,
-                       warnings, inertness_detail)
+                       warnings, inertness_detail, readings)
 
     if preconditions[INERTNESS] == "READING-DEPENDENT":
         warnings.append(
@@ -851,6 +1131,9 @@ def combine(*, exactness, inertness, ggn, gate_readings, coverage_info,
 
     out = {"control": "S-1", "rule_committed": RULE_COMMITTED,
            "verdict": verdict, "verdict_before_withdrawal": None,
+           "verdict_readings": _combination_readings(
+               strict_verdict=verdict, inertness_view=inertness_view,
+               preconditions=preconditions),
            "alpha": alpha, "preconditions": preconditions,
            "inertness_detail": inertness_detail,
            "broken_by": [], "transfer_statement_permitted": verdict != NOT_EVALUABLE,
@@ -874,6 +1157,12 @@ def combine(*, exactness, inertness, ggn, gate_readings, coverage_info,
         out["verdict"] = WITHDRAWN
         out["withdrawn"] = True
         out["transfer_statement_permitted"] = False
+        # Rebuilt rather than patched: a withdrawal applies to both readings,
+        # and leaving the pair on the pre-withdrawal verdicts would report a
+        # live verdict beside a withdrawn one.
+        out["verdict_readings"] = _combination_readings(
+            strict_verdict=WITHDRAWN, inertness_view=inertness_view,
+            preconditions=preconditions, withdrawn=True)
     return out
 
 
@@ -888,6 +1177,55 @@ def _line(label, value):
 
 def _fmt(value, spec="{:.4f}"):
     return "n/a" if value is None else spec.format(value)
+
+
+def _diagnostic_lines(detail):
+    """The non-gating diagnostic, printed where it cannot be mistaken for a gate.
+
+    It is labelled on every line it occupies, because the one risk a
+    post-hoc observation carries in a verdict block is being read as part of
+    the verdict.
+    """
+    diagnostic = (detail or {}).get(DIAGNOSTIC_KEY)
+    groups = (diagnostic or {}).get("draw_to_draw_by_lambda") or []
+    if not groups:
+        return []
+    lines = ["  draw-to-draw disagreement by lambda (diagnostic, gates nothing):"]
+    for group in groups:
+        pairs = ", ".join(
+            f"lambda {lam:g} {_fmt(mean)}"
+            for lam, mean in zip(group["lambda_ascending"], group["means"]))
+        monotone = group["monotone_falling_in_lambda"]
+        shape = ("monotone falling in lambda" if monotone
+                 else "not monotone" if monotone is False
+                 else "monotonicity undefined (means not logged)")
+        lines.append(f"    sigma x{group['sigma_multiplier']:g}: {pairs} -- {shape}")
+    lines.append(f"    {diagnostic['status']}")
+    return lines
+
+
+def _reading_lines(verdict):
+    """Both committed readings of the inertness precondition, with their hashes.
+
+    One OUTCOME line is kept, carrying the strict reading, and the other
+    reading is named on the lines beside it. The idiom is the one already used
+    for a log that disagrees with its own cells: say what each source gives and
+    that both are reported.
+    """
+    readings = verdict.get("verdict_readings")
+    if not readings:
+        return []
+    strict = readings.get(READING_STRICT, {})
+    other = readings.get(READING_PER_CELL, {})
+    lines = [
+        f"readings: {strict.get('verdict')!r} under {READING_STRICT} "
+        f"({strict.get('source')}, {strict.get('source_commit')}); "
+        f"{other.get('verdict')!r} under {READING_PER_CELL} "
+        f"({other.get('source')}, {other.get('source_commit')}) (both reported)"]
+    if other.get("verdict") != strict.get("verdict"):
+        lines.append(f"  under {READING_STRICT}: {strict.get('consequence')}")
+    lines.append(f"  under {READING_PER_CELL}: {other.get('consequence')}")
+    return lines
 
 
 def render_report(verdict):
@@ -905,6 +1243,7 @@ def render_report(verdict):
     if detail and not detail.get("agrees_with_log", True):
         out.append(f"  inertness log says {detail['verdict_logged']!r}; its cells give "
                    f"{detail['verdict_from_cells']!r} (both reported)")
+    out.extend(_diagnostic_lines(detail))
     out.append("")
 
     done = ", ".join(_cell_name(c) for c in cov["completed"]) or "none"
@@ -942,6 +1281,7 @@ def render_report(verdict):
                     f"(alpha/{round(ALPHA / gate['holm_threshold'])})  {gate['verdict']}")
     out.append("")
     out.append(f"OUTCOME: {verdict['verdict']}")
+    out.extend(_reading_lines(verdict))
     if verdict["withdrawn"]:
         out.append(f"MC dropout reproduced the finding; withdrawn verdict: "
                    f"{verdict['verdict_before_withdrawal']}")

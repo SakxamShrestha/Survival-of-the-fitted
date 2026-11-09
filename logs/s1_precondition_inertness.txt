@@ -1,0 +1,22 @@
+=== S-1 precondition_inertness ===
+founder: C-1 recipe, pool seed 0, memorization 0.977294921875 (established 0.977294921875, |diff| 0.00e+00)
+transmitted batch: B = 128, sampled hard labels at tau 1.0, 47 classes; probe pool seed 9000
+
+maximizer seed-to-seed (train(), 1500 steps, wd 0): mean 0.4099, 95% [0.4044, 0.4157], n = 20 pairs  (53s)
+
+lambda     1 sigma x1: fixed-MAP draw-to-draw 0.9843 [0.9685, 0.9942] -> EXCEEDS; per-draw-MAP 0.9726 [0.9460, 0.9903] -> EXCEEDS  (768.5s)
+    headroom: MAP-to-MAP 0.4500, draw-vs-MAP 0.9740, probe logit norm draw 0.361 vs MAP 0.013, MAP max-prob 0.020, probe alphabet MAP 1 draws 15.2; |grad| MAP 1.3e-15 draw 1.6e-01
+lambda    10 sigma x1: fixed-MAP draw-to-draw 0.9083 [0.8521, 0.9512] -> EXCEEDS; per-draw-MAP 0.8766 [0.8246, 0.9221] -> EXCEEDS  (774.9s)
+    headroom: MAP-to-MAP 0.5000, draw-vs-MAP 0.7819, probe logit norm draw 0.466 vs MAP 0.128, MAP max-prob 0.021, probe alphabet MAP 1 draws 8.7; |grad| MAP 2.1e-14 draw 1.7e+00
+lambda   100 sigma x1: fixed-MAP draw-to-draw 0.2681 [0.2642, 0.2719] -> does NOT exceed; per-draw-MAP 0.2614 [0.2579, 0.2647] -> does NOT exceed  (998.2s)
+    headroom: MAP-to-MAP 0.0047, draw-vs-MAP 0.9581, probe logit norm draw 18.535 vs MAP 3.587, MAP max-prob 0.056, probe alphabet MAP 3 draws 45.5; |grad| MAP 2.6e+01 draw 1.2e+02
+lambda     1 sigma x4: fixed-MAP draw-to-draw 0.7901 [0.7828, 0.7974] -> EXCEEDS; per-draw-MAP 0.7865 [0.7757, 0.7980] -> EXCEEDS  (946.1s)
+    headroom: MAP-to-MAP 0.8000, draw-vs-MAP 0.9073, probe logit norm draw 21.757 vs MAP 0.200, MAP max-prob 0.021, probe alphabet MAP 1 draws 48.4; |grad| MAP 2.7e-15 draw 3.3e+00
+lambda    10 sigma x4: fixed-MAP draw-to-draw 0.9178 [0.9133, 0.9222] -> EXCEEDS; per-draw-MAP 0.9266 [0.9241, 0.9291] -> EXCEEDS  (1091.4s)
+    headroom: MAP-to-MAP 0.5799, draw-vs-MAP 0.8965, probe logit norm draw 15.717 vs MAP 18.316, MAP max-prob 0.478, probe alphabet MAP 45 draws 48.5; |grad| MAP 4.5e+00 draw 2.9e+00
+lambda   100 sigma x4: fixed-MAP draw-to-draw 0.8682 [0.8649, 0.8714] -> EXCEEDS; per-draw-MAP 0.8703 [0.8657, 0.8742] -> EXCEEDS  (2079.3s)
+    headroom: MAP-to-MAP 0.1969, draw-vs-MAP 0.8080, probe logit norm draw 17.543 vs MAP 20.457, MAP max-prob 0.964, probe alphabet MAP 47 draws 48.4; |grad| MAP 4.1e+00 draw 2.6e+00
+
+=== precondition_inertness: BROKEN (fixed-MAP reading: 5/6 cells; per-draw-MAP reading: 5/6) ===
+Reminder from the rule: MC dropout is expected to pass this check too; a pass is not evidence that the sampler is genuine.
+wrote logs/s1_precondition_inertness.json

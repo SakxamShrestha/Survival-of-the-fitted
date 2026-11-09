@@ -706,12 +706,29 @@ def test_coverage_is_computed_from_loaded_cells(tmp_path):
 
 # ====================================================== inertness re-reading
 
-def inertness_payload(verdict, fixed, full):
-    return {"stage": "precondition_inertness", "verdict": verdict,
-            "cells": [{"lambda": 100.0, "sigma_multiplier": 4.0,
-                       "fixed_map": {"exceeds_maximizer_non_overlapping": f},
-                       "per_draw_map": {"exceeds_maximizer_non_overlapping": u}}
-                      for f, u in zip(fixed, full)]}
+def inertness_payload(verdict, fixed, full, cells=None, means=None):
+    """A precondition_inertness payload, one cell per entry of `fixed`.
+
+    Every cell used to carry the same (lambda, sigma) identity, which made it
+    impossible to test that a failing cell is named by the cell it actually
+    is. The identities now default to the committed grid order, so a two-cell
+    payload is lambda 100 at 4 x sigma_match and then at sigma_match - the
+    same first cell the earlier fixture asserted, with a distinct second one.
+    `means` supplies the fixed-MAP disagreement means the non-gating
+    diagnostic reads; it is optional because the runner's own cells carry it
+    and the verdict never does.
+    """
+    ids = list(cells if cells is not None else agg.COMMITTED_CELLS[:len(fixed)])
+    out = []
+    for (lam, mult), f, u in zip(ids, fixed, full):
+        cell = {"lambda": float(lam), "sigma_multiplier": float(mult),
+                "fixed_map": {"exceeds_maximizer_non_overlapping": f},
+                "per_draw_map": {"exceeds_maximizer_non_overlapping": u}}
+        out.append(cell)
+    if means is not None:
+        for cell, mean in zip(out, means):
+            cell["fixed_map"]["mean"] = mean
+    return {"stage": "precondition_inertness", "verdict": verdict, "cells": out}
 
 
 def test_inertness_is_reread_from_its_cells_under_the_amendments_definition():
@@ -725,8 +742,15 @@ def test_inertness_is_reread_from_its_cells_under_the_amendments_definition():
 def test_a_verdict_bearing_failure_is_BROKEN_even_where_the_runner_said_reading_dependent():
     # The runner emits READING-DEPENDENT when the two readings merely differ; the
     # amendment defines it only as verdict-bearing passed and per-draw-MAP did not.
+    #
+    # Shape change, not a weakening: this asserted one verdict, and there are two
+    # committed texts, so it now asserts the strict reading AND that the scalar
+    # `verdict` key is still that same strict reading. The per-cell reading of the
+    # same payload is asserted separately below.
     out = agg.read_inertness(inertness_payload("READING-DEPENDENT", [False, True], [True, True]))
     assert out["verdict"] == "BROKEN"
+    assert out["verdict_strict"] == "BROKEN"
+    assert out["verdict"] == out["verdict_strict"]
     assert out["verdict_logged"] == "READING-DEPENDENT"
     assert out["agrees_with_log"] is False
     assert out["failing_cells_verdict_bearing"] == [[100.0, 4.0]]
@@ -747,6 +771,245 @@ def test_a_disagreement_between_log_and_cells_is_reported_in_the_verdict(tmp_pat
 def test_inertness_without_cells_falls_back_to_the_logged_verdict():
     out = agg.read_inertness({"verdict": "PASS"})
     assert out["verdict"] == "PASS" and out["verdict_from_cells"] is None
+
+
+# ============================================ the two committed readings, side by side
+#
+# gates/thresholds.json:999 precondition_inertness (a6d477e, 2026-10-20) says any
+# failure makes the arm BROKEN and no gate is read. gates/thresholds.json:1347
+# inertness_scope.aggregation (ed850d8, 2026-11-08) names the failing cell, reads
+# no gate on it, and applies PARTIAL. Nothing records precedence between them, so
+# both are carried; these tests assert that neither is resolved away.
+
+ONE_FAILING = ([False, True, True, True, True, True], [True] * 6)
+
+
+def test_read_inertness_returns_both_readings_each_tagged_with_its_commit():
+    out = agg.read_inertness(inertness_payload("BROKEN", *ONE_FAILING))
+    assert set(out["readings"]) == {agg.READING_STRICT, agg.READING_PER_CELL}
+    assert out["readings"][agg.READING_STRICT]["source_commit"] == "a6d477e"
+    assert out["readings"][agg.READING_PER_CELL]["source_commit"] == "ed850d8"
+    assert "precondition_inertness" in out["readings"][agg.READING_STRICT]["source"]
+    assert "inertness_scope" in out["readings"][agg.READING_PER_CELL]["source"]
+
+
+def test_one_failing_cell_is_BROKEN_strict_and_PARTIAL_per_cell():
+    out = agg.read_inertness(inertness_payload("BROKEN", *ONE_FAILING))
+    assert out["verdict_strict"] == "BROKEN"
+    assert out["verdict_per_cell"] == agg.PARTIAL
+    assert out["verdict"] == "BROKEN", "the scalar key stays the strict reading"
+    assert out["n_cells"] == 6 and out["n_cells_passing_verdict_bearing"] == 5
+
+
+def test_the_per_cell_reading_names_the_failing_cell_by_its_lambda_and_sigma():
+    out = agg.read_inertness(inertness_payload("BROKEN", *ONE_FAILING))
+    assert out["refused_cells_verdict_bearing"] == [[100.0, 4.0]]
+    assert out["refused_cell_names"] == ["lambda 100 sigma x4"]
+
+
+def test_the_cell_named_is_the_cell_that_failed_and_not_the_first_cell():
+    # lambda 100 at sigma_match is the fifth entry of COMMITTED_CELLS order only
+    # if the grid is walked as committed; name it explicitly so the test cannot
+    # pass by accident.
+    cells = [(100.0, 4.0), (100.0, 1.0)]
+    out = agg.read_inertness(
+        inertness_payload("BROKEN", [True, False], [True, True], cells=cells))
+    assert out["refused_cells_verdict_bearing"] == [[100.0, 1.0]]
+    assert out["refused_cell_names"] == ["lambda 100 sigma x1"]
+
+
+def test_no_cell_passing_is_BROKEN_under_both_readings():
+    out = agg.read_inertness(inertness_payload("BROKEN", [False, False], [True, True]))
+    assert out["verdict_strict"] == "BROKEN"
+    assert out["verdict_per_cell"] == "BROKEN"
+    assert out["n_cells_passing_verdict_bearing"] == 0
+
+
+def test_every_cell_passing_gives_the_same_verdict_under_both_readings():
+    out = agg.read_inertness(inertness_payload("PASS", [True] * 6, [True] * 6))
+    assert out["verdict_strict"] == "PASS" and out["verdict_per_cell"] == "PASS"
+    assert out["refused_cells_verdict_bearing"] == []
+
+
+def test_a_per_draw_map_only_failure_is_READING_DEPENDENT_under_both_readings():
+    # Nothing failed under the verdict-bearing reading, so the per-cell text has
+    # no cell to exclude and the two readings cannot differ.
+    out = agg.read_inertness(inertness_payload("READING-DEPENDENT", [True, True], [True, False]))
+    assert out["verdict_strict"] == "READING-DEPENDENT"
+    assert out["verdict_per_cell"] == "READING-DEPENDENT"
+
+
+def test_inertness_without_cells_tags_both_readings_with_the_logged_verdict():
+    out = agg.read_inertness({"verdict": "PASS"})
+    assert out["verdict_strict"] == "PASS" and out["verdict_per_cell"] == "PASS"
+    assert set(out["readings"]) == {agg.READING_STRICT, agg.READING_PER_CELL}
+
+
+# ------------------------------------------- the readings reach the verdict dict
+
+def test_the_normal_verdict_dict_carries_both_readings():
+    out = combine({"A": reading("A", 0.4), "B": reading("B", 0.4), "C": reading("C", 0.4)},
+                  inertness=agg.read_inertness(inertness_payload("PASS", [True] * 6, [True] * 6)))
+    pair = out["verdict_readings"]
+    assert set(pair) == {agg.READING_STRICT, agg.READING_PER_CELL}
+    assert pair[agg.READING_STRICT]["verdict"] == agg.PASSES
+    assert pair[agg.READING_PER_CELL]["verdict"] == agg.PASSES
+    assert pair[agg.READING_STRICT]["source_commit"] == "a6d477e"
+    assert pair[agg.READING_PER_CELL]["source_commit"] == "ed850d8"
+    assert pair[agg.READING_PER_CELL]["consequence"]
+
+
+def test_the_broken_verdict_dict_carries_both_readings_too():
+    # _broken is built independently of the normal dict, so it is asserted
+    # separately: adding the key to one and not the other is the bug.
+    inert = agg.read_inertness(inertness_payload("BROKEN", *ONE_FAILING))
+    out = combine({}, inertness=inert)
+    assert out["verdict"] == agg.BROKEN
+    pair = out["verdict_readings"]
+    assert pair[agg.READING_STRICT]["verdict"] == agg.BROKEN
+    assert pair[agg.READING_PER_CELL]["verdict"] == agg.PARTIAL
+    assert pair[agg.READING_PER_CELL]["refused_cells"] == [[100.0, 4.0]]
+    assert "lambda 100 sigma x4" in pair[agg.READING_PER_CELL]["consequence"]
+
+
+def test_the_scalar_verdict_of_the_combination_is_the_strict_reading():
+    inert = agg.read_inertness(inertness_payload("BROKEN", *ONE_FAILING))
+    out = combine({}, inertness=inert)
+    assert out["verdict"] == out["verdict_readings"][agg.READING_STRICT]["verdict"]
+    assert out["verdict"] != out["verdict_readings"][agg.READING_PER_CELL]["verdict"]
+    assert out["broken_by"] == [agg.INERTNESS]
+
+
+def test_a_broken_exactness_is_BROKEN_under_both_readings():
+    # The per-cell reading is a reading of the inertness precondition only. It
+    # cannot rescue an arm broken by a different precondition.
+    inert = agg.read_inertness(inertness_payload("BROKEN", *ONE_FAILING))
+    out = combine({}, exactness="BROKEN", inertness=inert)
+    pair = out["verdict_readings"]
+    assert pair[agg.READING_STRICT]["verdict"] == agg.BROKEN
+    assert pair[agg.READING_PER_CELL]["verdict"] == agg.BROKEN
+    assert agg.EXACTNESS in pair[agg.READING_PER_CELL]["consequence"]
+
+
+def test_no_cell_passing_is_BROKEN_in_the_combination_under_both_readings():
+    inert = agg.read_inertness(inertness_payload("BROKEN", [False, False], [True, True]))
+    out = combine({}, inertness=inert)
+    pair = out["verdict_readings"]
+    assert pair[agg.READING_STRICT]["verdict"] == agg.BROKEN
+    assert pair[agg.READING_PER_CELL]["verdict"] == agg.BROKEN
+
+
+def test_a_withdrawn_verdict_is_withdrawn_under_both_readings():
+    out = combine({"A": reading("A", 0.4), "B": reading("B", 0.4), "C": reading("C", 0.4)},
+                  mc=True)
+    pair = out["verdict_readings"]
+    assert pair[agg.READING_STRICT]["verdict"] == agg.WITHDRAWN
+    assert pair[agg.READING_PER_CELL]["verdict"] == agg.WITHDRAWN
+
+
+def test_a_plain_string_inertness_verdict_still_produces_both_readings():
+    out = combine({"A": reading("A", 0.4), "B": reading("B", 0.4), "C": reading("C", 0.4)},
+                  inertness="PASS")
+    assert set(out["verdict_readings"]) == {agg.READING_STRICT, agg.READING_PER_CELL}
+
+
+def test_the_verdict_dict_with_both_readings_round_trips_through_json():
+    inert = agg.read_inertness(inertness_payload("BROKEN", *ONE_FAILING,
+                                                 means=[0.27, 0.91, 0.98, 0.87, 0.92, 0.79]))
+    out = combine({}, inertness=inert)
+    back = json.loads(json.dumps(out))
+    assert back["verdict_readings"][agg.READING_PER_CELL]["verdict"] == agg.PARTIAL
+    assert back["verdict_readings"][agg.READING_PER_CELL]["refused_cells"] == [[100.0, 4.0]]
+
+
+# ------------------------------------------------------------ the report prints both
+
+def _report_with_one_failing_cell():
+    inert = agg.read_inertness(inertness_payload("BROKEN", *ONE_FAILING))
+    return agg.render_report(combine({}, inertness=inert))
+
+
+def test_the_report_keeps_one_outcome_line_carrying_the_strict_verdict():
+    text = _report_with_one_failing_cell()
+    assert len([l for l in text.splitlines() if l.startswith("OUTCOME:")]) == 1
+    assert "OUTCOME: BROKEN" in text
+
+
+def test_the_report_names_the_other_reading_its_verdict_and_its_consequence():
+    text = _report_with_one_failing_cell()
+    assert agg.READING_PER_CELL in text
+    assert "'PARTIAL'" in text
+    assert "lambda 100 sigma x4" in text
+    assert "both reported" in text
+
+
+def test_the_report_prints_both_commit_hashes():
+    text = _report_with_one_failing_cell()
+    assert "a6d477e" in text and "ed850d8" in text
+
+
+def test_the_report_of_an_agreeing_pair_still_names_both_readings():
+    inert = agg.read_inertness(inertness_payload("PASS", [True] * 6, [True] * 6))
+    text = agg.render_report(
+        combine({"A": reading("A", 0.4), "B": reading("B", 0.4), "C": reading("C", 0.4)},
+                inertness=inert))
+    assert "a6d477e" in text and "ed850d8" in text
+    assert "both reported" in text
+
+
+# ------------------------------------------------- the diagnostic, which gates nothing
+
+DIAG_MEANS = [0.79, 0.27, 0.92, 0.91, 0.87, 0.98]   # (100,4) (100,1) (10,4) (10,1) (1,4) (1,1)
+
+
+def diagnostic_payload():
+    return inertness_payload("BROKEN", *ONE_FAILING, means=DIAG_MEANS)
+
+
+def test_the_diagnostic_is_derived_from_the_cells_and_not_asserted():
+    out = agg.read_inertness(diagnostic_payload())
+    diag = out[agg.DIAGNOSTIC_KEY]["draw_to_draw_by_lambda"]
+    at_match = [g for g in diag if g["sigma_multiplier"] == 1.0][0]
+    assert at_match["lambda_ascending"] == [1.0, 10.0, 100.0]
+    assert at_match["means"] == [0.98, 0.91, 0.27]
+    assert at_match["monotone_falling_in_lambda"] is True
+    at_four = [g for g in diag if g["sigma_multiplier"] == 4.0][0]
+    assert at_four["means"] == [0.87, 0.92, 0.79]
+    assert at_four["monotone_falling_in_lambda"] is False
+
+
+def test_the_diagnostic_is_undefined_rather_than_guessed_without_means():
+    out = agg.read_inertness(inertness_payload("PASS", [True] * 6, [True] * 6))
+    for group in out[agg.DIAGNOSTIC_KEY]["draw_to_draw_by_lambda"]:
+        assert group["monotone_falling_in_lambda"] is None
+
+
+def test_the_diagnostic_cannot_change_any_verdict():
+    # Enforcement, not convention: combine decides on verdict_bearing_view(detail),
+    # which has the diagnostic key removed, so the value is not reachable from any
+    # verdict branch. Replacing it with anything at all must leave the verdict
+    # dict byte-identical once the diagnostic itself is set aside.
+    base = agg.read_inertness(diagnostic_payload())
+    poisoned = dict(base)
+    poisoned[agg.DIAGNOSTIC_KEY] = {"draw_to_draw_by_lambda": "monotone, therefore PASS"}
+    one = combine({}, inertness=base)
+    two = combine({}, inertness=poisoned)
+    one["inertness_detail"] = two["inertness_detail"] = None
+    assert json.dumps(one, sort_keys=True) == json.dumps(two, sort_keys=True)
+
+
+def test_the_verdict_bearing_view_drops_the_diagnostic_and_keeps_everything_else():
+    base = agg.read_inertness(diagnostic_payload())
+    view = agg.verdict_bearing_view(base)
+    assert agg.DIAGNOSTIC_KEY not in view
+    assert set(view) == set(base) - {agg.DIAGNOSTIC_KEY}
+    assert agg.DIAGNOSTIC_KEY in base, "the view is a copy; the detail keeps its diagnostic"
+
+
+def test_the_report_prints_the_diagnostic_as_an_observation_only():
+    text = agg.render_report(combine({}, inertness=agg.read_inertness(diagnostic_payload())))
+    assert "diagnostic, gates nothing" in text
+    assert "sigma x1" in text and "0.9800" in text
 
 
 # ================================================================== report

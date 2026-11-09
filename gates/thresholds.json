@@ -1223,6 +1223,50 @@
         "sigma_match is read as the predicted consequence of a strong prior, not as a surprise."
       ]
     },
+    "recording_amendment_2026_11_08": {
+      "added": "2026-11-08, before any S-1 sweep or negative-control chain has been run and before any gate has been read on real S-1 data. Two further silences, found while preparing to run order_of_work step 3. It changes no gate, threshold, grid, statistic or order.",
+      "legitimacy": [
+        "This amends an entry already committed, so it is held to the two conditions f902f11 recorded",
+        "for that move. (i) Neither clause can make any outcome easier to claim: a chain-seed",
+        "convention fixes arbitrary pseudo-random streams, and recording a survivor set the runner",
+        "already summarises as a count can only make a refusal readable where it would otherwise be",
+        "NOT EVALUABLE. (ii) The gates' own statistics have not been computed on real S-1 data; every",
+        "S-1 gate number in the repository to date is synthetic, from the aggregator's own tests."
+      ],
+      "chain_seeds": {
+        "rule": "Founder at pool seed s contributes chain seeds 7700 + 2 s and 7701 + 2 s, so pool seeds 0 to 19 use 7700 to 7739. The same two seeds serve that founder in every (lambda, sigma) cell and in both arms.",
+        "why": [
+          "controls/s1_sampler_arm.py makes --chain-seeds a required flag with no default,",
+          "deliberately, so that the runner chooses nothing. That leaves the values to whoever types",
+          "the command, and 240 invocations typed by hand is exactly where an unrecorded choice",
+          "enters. The formula is written here so the sweep is reproducible from the rule alone.",
+          "",
+          "Reusing the same two seeds across cells and across arms makes the design paired: a",
+          "founder's production stream and learner stream are the same wherever that founder appears,",
+          "so a difference between two cells, or between the sampler and the dropout arm, is not a",
+          "difference of seed. The values continue the runner's existing 7xxx block (SEED_TIMING_CHAIN",
+          "= 7600 is the highest already spent) and collide with nothing."
+        ],
+        "what_it_does_not_claim": "Seeds are not a statistical choice. R = 2 remains two chains per founder, and no interval is narrowed by this clause."
+      },
+      "probe_pool_survivor_sets": {
+        "rule": "run_chain records the probe pool's generation-25 survivor SET per chain, as 'probe_survivors', beside the training pool's 'survivors'.",
+        "why": [
+          "design_amendment_2026_11_08.pool_for_gates_and_floor_1 puts gates A, B and C and headroom",
+          "floor 1 on the held-out probe pool at probe_seed 9000. run_chain recorded that pool as",
+          "sizes only, while gates A and B are statistics of survivor SETS, so",
+          "controls/s1_aggregate.survivor_sets raises ProbeSurvivorsMissing for the very pool the rule",
+          "names. Without this the sweep's logs could be read only on the training pool - the pool the",
+          "rule explicitly does not put the gates on, and whose alphabet is about twice the probe",
+          "pool's at this bottleneck.",
+          "",
+          "It is written before the chains run because open_logs refuses to overwrite an existing log:",
+          "a chain logged without its probe survivor set cannot be regenerated under the same tag, and",
+          "the omission would surface only when a gate was read."
+        ],
+        "training_pool_unchanged": "'survivors' keeps its meaning and is still recorded. Nothing is removed, and the two pools are never quoted against each other."
+      }
+    },
     "design_amendment_2026_11_08": {
       "added": "2026-11-08, before any S-1 chain has been run. Five decisions this entry left open and the code therefore made silently. It changes no gate, threshold, grid, statistic or order; each clause only names what was already unstated.",
       "why": [
