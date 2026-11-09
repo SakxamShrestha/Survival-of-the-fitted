@@ -1364,6 +1364,83 @@
         ]
       },
 
+      "gate_b_arm_assembly": {
+        "added": "2026-11-08, before any gate B code exists and before any chain has been run. Found while implementing the aggregator, not while reading a result.",
+        "the_silence": [
+          "Gate B's metric reads 'cross-arm permutation test on mean pairwise Jaccard of survivor",
+          "sets, same-founder arm against different-founder arm, computed by analysis/overlap_stats.py'.",
+          "That module's cross_arm_permutation_test(sets_a, sets_b, ...) takes two LISTS OF SETS and",
+          "permutes which set belongs to which list. But same-founder versus different-founder is a",
+          "property of a PAIR, not of a set: with 20 founders at R = 2 there are 40 survivor sets, and",
+          "every one of them sits in one same-founder pair and 38 different-founder pairs at once. No",
+          "partition of the 40 sets into two lists separates the two kinds of pair. The named function",
+          "therefore cannot compute the named statistic, and the entry does not say what to do instead."
+        ],
+        "decision": {
+          "statistic": "mean Jaccard over the 20 same-founder pairs minus mean Jaccard over the 760 different-founder pairs, both taken over the same 40 survivor sets at R = 2.",
+          "null": "Permute the FOUNDER LABEL across chains, 10000 permutations, holding the survivor sets fixed. Which pairs count as same-founder follows from the permuted labels.",
+          "tail": "One-sided for same-founder overlap EXCEEDING different-founder overlap, then Holm-Bonferroni across gates A, B and C as already committed.",
+          "p_value": "The conservative permutation estimate (1 + #{null >= observed}) / (1 + n_perm), matching gate A and analysis/overlap_stats.py."
+        },
+        "why_this_assembly_and_not_the_others": [
+          "Permuting the founder label is the only permutation that is simultaneously a permutation of",
+          "'the arm label' in the sense the entry names AND one the pair structure admits: reassigning",
+          "founders reassigns which pairs are same-founder, which is exactly the null hypothesis 'the",
+          "founder carries no information about survivor-set overlap'. It also makes gate B's null the",
+          "same permutation as gate A's, which is a feature rather than a coincidence - the entry says",
+          "gate B reaches gate A's conclusion 'by a second route', and two routes should differ in their",
+          "statistic, not in what they hold fixed.",
+          "",
+          "Two alternatives were considered and rejected, recorded so the choice is visible. (i) One",
+          "cross_arm_permutation_test per founder, two chains per arm: the literal reading of the named",
+          "function, but n = 2 per arm per founder is below that function's own refusal threshold and",
+          "would need a further rule for combining 20 tests, which the entry does not give. (ii) A",
+          "different statistic, such as the overlap coefficient: rejected because the entry commits gate",
+          "B to Jaccard, and changing the statistic to fit the available function would be the tail",
+          "wagging the dog."
+        ],
+        "what_this_costs": [
+          "The two arms are badly unbalanced at R = 2 - 20 same-founder pairs against 760",
+          "different-founder pairs - so the same-founder mean is the noisier side by a wide margin and",
+          "the observed difference is dominated by its variance. This is a property of R = 2 and not of",
+          "the assembly; it is stated here so that a non-significant gate B is not read as evidence of",
+          "absence. The permutation null carries the same imbalance, so the p-value remains valid.",
+          "Both pair counts are reported beside the statistic."
+        ],
+        "does_not_change": "No threshold, grid, statistic family, tail direction, permutation count or correction moves. This clause only says how the two arms the entry already names are assembled from the chains."
+      },
+
+      "floor_3_has_no_referent_here": {
+        "added": "2026-11-08, with the gate B clause above and before any chain has been run.",
+        "the_silence": [
+          "Headroom floor 3 says gate B and gate C 'must therefore report, for each null they use, the",
+          "number of sets n and an estimate of that first-order variance, and are NOT EVALUABLE if the",
+          "two nulls being compared fall in different regimes.' It was written after C-4O, where a",
+          "frequency-matched null was set against a uniform one - a situation with TWO nulls in one",
+          "comparison. Neither gate here has that shape. Gate C uses one null, the sigma-label",
+          "permutation. Gate B, as assembled above, uses one null, the founder-label permutation. So",
+          "'the two nulls being compared' has no referent in either gate."
+        ],
+        "decision": {
+          "reporting_requirement_stands": "Both gates report n and the first-order variance estimate zeta_1 for the null they use, beside the p-value. This half of the clause is well defined and is not waived.",
+          "refusal_clause_is_NOT_APPLICABLE": "Because each gate uses a single null, the mismatch refusal has nothing to compare. It is recorded per gate as NOT APPLICABLE, with the reason, and is never recorded as passed.",
+          "if_a_second_null_is_ever_added": "Any future comparison that does set two nulls against each other re-activates the refusal clause as written, with no further amendment needed."
+        },
+        "why_not_simply_pass_it": [
+          "Until 2026-11-08 the aggregator wired this floor as scaling_regime(survivor_sets) against",
+          "scaling_regime(survivor_sets) - the same collection twice - so the two regimes were always",
+          "equal and the floor could never fire. That is the pathology this project has recorded three",
+          "times: C-4 gate B, both C-2R gates, and the C-8 tolerance. 'A check that cannot fail has not",
+          "passed.' Recording NOT APPLICABLE says the true thing; recording a pass would say a false one.",
+          "",
+          "A measured reason to keep the distinction sharp: the regime classifier itself misclassifies a",
+          "genuinely degenerate null as non-degenerate in roughly one trial in fifteen, measured",
+          "2026-11-08 on uniform class-exchangeable draws and recorded in analysis/sigma_attractor.py.",
+          "The error runs in the permissive direction. A floor with that false-permit rate must not also",
+          "be reported as having passed something it never examined."
+        ]
+      },
+
       "checker_blind_spot_disclosed": [
         "ci/check_gate_ordering.py resolves a control to the EARLIEST commit containing its key, so these",
         "clauses - filed inside the existing S-1 key, as categorical_sampler_amendment was - resolve to",
