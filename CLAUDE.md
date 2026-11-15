@@ -23,20 +23,49 @@ files the user is pointing at.
 python3 spike_iterated_distill.py --gens 20 --tau 1.0 --bottleneck 4096
 ```
 
-Requires PyTorch and NumPy. Torch 2.8.0 is installed system-wide; there is no project
-virtualenv for the research code. torchvision is **not** installed, and the disk is near
-full (about 8 GB free), so avoid large dataset downloads without checking first.
+Requires PyTorch and NumPy. Torch 2.8.0 is installed under `/usr/bin/python3`, which is the
+interpreter every control targets; there is no project virtualenv for the research code.
+Plain `python3` is `/opt/anaconda3/bin/python3` and carries torch 2.5.1, so a control run
+through it sits on a different torch from every committed chain.
+
+Three statements in this section were wrong until they were measured on 2026-11-12.
+
+- **The disk is fuller than this file used to say: 3.7 GiB free, not about 8 GB**
+  (`df -h /Users/sakxamshrestha`). Any dataset proposal must state its on-disk size, and
+  anything in the hundreds of megabytes needs space freed before it is attempted.
+- **torchvision is installed, but not usably.** It is absent from `/usr/bin/python3` and
+  present in the anaconda environment at 0.20.1 — where sklearn, scipy.sparse and
+  matplotlib each raise `ImportError: numpy.core.multiarray failed to import`, because that
+  environment's numpy is 2.0.2 while they are built against 1.x. Every script under
+  `controls/` imports sklearn, so none of them runs there. Treat torchvision as unavailable
+  and read image data another way; `controls/c9_digits_descriptive.py` needs no network at
+  all.
+- **`fetch_openml` does not work on this machine.** `api.openml.org` and `www.openml.org`
+  both time out, while figshare — which backs every other sklearn fetcher — returns 200 on
+  the same connection. That removes `mnist_784`, `Fashion-MNIST` and every OpenML tabular
+  id. `yann.lecun.com/exdb/mnist/` returns 404; the ossci S3 mirror of MNIST does not.
 
 ### Device selection — measured, not assumed
 
 | model | CPU | MPS | use |
 |---|---|---|---|
 | synthetic MLP (92k params, 1500 steps) | **1.61 s** | 2.47 s | **CPU** |
+| digits MLP, d_in 64, C 10 (85k params) | **2.14 s** | 3.55 s | **CPU** |
+| MNIST-shaped MLP, d_in 784, C 10 (269k) | **3.67 s** | 4.06 s | **CPU** |
+| EMNIST-shaped MLP, d_in 784, C 47 (279k) | **3.74 s** | 4.14 s | **CPU** |
+| tfidf MLP, d_in 2000, C 20 (583k) | **5.45 s** | 6.78 s | **CPU** |
 | EMNIST-shaped CNN (212k params, 1500 steps) | 48.2 s | **8.7 s** | **MPS** |
 
 The tiny MLP is slower on MPS because kernel-launch overhead dominates; the convolutional
 model is 5.5x faster there. Do not apply one blanket rule to both. `bench_cnn.py`
 reproduces the CNN measurement.
+
+The four middle rows were measured on 2026-11-12, at 1500 steps and batch 256 with
+`torch.mps.synchronize()` around the timed region, and they settle a question this table
+previously left open. **CPU wins at every MLP shape up to 583k parameters — six times the
+existing model's parameter count — so no real-dataset MLP arm should move to MPS.** The
+5.5x MPS win belongs to the convolutional model specifically, not to larger models in
+general, and nothing measured here reaches that regime.
 
 Google Colab Pro is available if a scale-up arm is needed. Do not design around it — the
 core experiment must stay runnable locally, because its statistical power comes from
