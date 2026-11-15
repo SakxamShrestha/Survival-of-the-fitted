@@ -1,0 +1,89 @@
+=== C-10: Iteration against one step, on natural data ===
+preregistered gates, committed 2026-11-14:
+  sanity  chain generation 1 lies inside the step-matched reference's central 95% in every gated condition
+  A       some chain generation g <= 25 falls below the step-matched reference's 2.5th percentile
+  B       some chain generation g <= 25 falls below the compute-matched reference's 2.5th percentile
+  C       some chain generation g <= 25 falls below the reference's 2.5th percentile
+
+precondition_founder_identity: training-pool accuracy 1.0000 against C-9's 1.0000 -> PASS
+  probe-pool accuracy 0.9733 reported beside it, not checked: a different quantity.
+
+gated conditions: b128_absolute_match, b37_ratio_match  (both, neither privileged)
+full-pool condition not re-run here; C-9's descriptive numbers stand.
+
+--- b128_absolute_match  B = 128  (absolute: the synthetic headline condition's own B) ---
+  step-matched reference done (20 students x 1500 steps)  30s
+  compute-matched reference done (20 students x 37500 steps)  2833s
+  chain seed 910  gen25 probe agree 0.841  acc_true 0.840  classes 10  4161s
+  chain seed 911  gen25 probe agree 0.865  acc_true 0.865  classes 10  9186s
+  chain seed 912  gen25 probe agree 0.840  acc_true 0.836  classes 10  9532s
+  chain seed 913  gen25 probe agree 0.863  acc_true 0.860  classes 10  9573s
+  chain seed 914  gen25 probe agree 0.873  acc_true 0.870  classes 10  9614s
+  chain seed 915  gen25 probe agree 0.876  acc_true 0.870  classes 10  9651s
+  chain seed 916  gen25 probe agree 0.883  acc_true 0.876  classes 10  9688s
+  chain seed 917  gen25 probe agree 0.871  acc_true 0.865  classes 10  9724s
+  chain seed 918  gen25 probe agree 0.868  acc_true 0.868  classes 10  9762s
+  chain seed 919  gen25 probe agree 0.868  acc_true 0.871  classes 10  9799s
+  chain seed 920  gen25 probe agree 0.840  acc_true 0.835  classes 10  9836s
+  chain seed 921  gen25 probe agree 0.871  acc_true 0.871  classes 10  9873s
+  chain seed 922  gen25 probe agree 0.846  acc_true 0.845  classes 10  9910s
+  chain seed 923  gen25 probe agree 0.840  acc_true 0.835  classes 10  9947s
+  chain seed 924  gen25 probe agree 0.850  acc_true 0.840  classes 10  9989s
+  chain seed 925  gen25 probe agree 0.838  acc_true 0.836  classes 10  10152s
+  chain seed 926  gen25 probe agree 0.831  acc_true 0.828  classes 10  10172s
+  chain seed 927  gen25 probe agree 0.831  acc_true 0.823  classes 10  10191s
+  chain seed 928  gen25 probe agree 0.860  acc_true 0.856  classes 10  10210s
+  chain seed 929  gen25 probe agree 0.841  acc_true 0.835  classes 10  10229s
+
+--- b37_ratio_match  B = 37  (ratio: 0.0312 of this pool, as 128/4096 is of 4096) ---
+  step-matched reference done (20 students x 1500 steps)  10241s
+  compute-matched reference done (20 students x 37500 steps)  10550s
+  chain seed 910  gen25 probe agree 0.294  acc_true 0.292  classes 5  10565s
+  chain seed 911  gen25 probe agree 0.369  acc_true 0.367  classes 5  10583s
+  chain seed 912  gen25 probe agree 0.269  acc_true 0.277  classes 3  10602s
+  chain seed 913  gen25 probe agree 0.412  acc_true 0.414  classes 8  10623s
+  chain seed 914  gen25 probe agree 0.434  acc_true 0.444  classes 6  10641s
+  chain seed 915  gen25 probe agree 0.314  acc_true 0.322  classes 6  10657s
+  chain seed 916  gen25 probe agree 0.381  acc_true 0.381  classes 7  10672s
+  chain seed 917  gen25 probe agree 0.357  acc_true 0.367  classes 5  10688s
+  chain seed 918  gen25 probe agree 0.442  acc_true 0.437  classes 9  10704s
+  chain seed 919  gen25 probe agree 0.321  acc_true 0.322  classes 6  10719s
+  chain seed 920  gen25 probe agree 0.347  acc_true 0.347  classes 6  10735s
+  chain seed 921  gen25 probe agree 0.407  acc_true 0.406  classes 5  10750s
+  chain seed 922  gen25 probe agree 0.352  acc_true 0.359  classes 6  10766s
+  chain seed 923  gen25 probe agree 0.513  acc_true 0.509  classes 10  10781s
+  chain seed 924  gen25 probe agree 0.356  acc_true 0.357  classes 7  10797s
+  chain seed 925  gen25 probe agree 0.364  acc_true 0.367  classes 7  10812s
+  chain seed 926  gen25 probe agree 0.287  acc_true 0.287  classes 5  10828s
+  chain seed 927  gen25 probe agree 0.219  acc_true 0.217  classes 6  10843s
+  chain seed 928  gen25 probe agree 0.321  acc_true 0.319  classes 6  10859s
+  chain seed 929  gen25 probe agree 0.379  acc_true 0.386  classes 7  10874s
+
+=== gate readings ===
+
+b128_absolute_match  B = 128
+  sanity: chain gen 1 mean agreement 0.9074 in [0.8862, 0.9342] -> OK
+  gate A             agree_gen0 vs step-matched       PASSED  (escapes at gen 8; floor 0.8862, gen1 0.9074, gen25 0.8549)
+  gate B             agree_gen0 vs compute-matched    NOT EVALUABLE  [1 saturation at generation 1]
+  gate C_vs_step     acc_true   vs step-matched       PASSED  (escapes at gen 6; floor 0.8839, gen1 0.9000, gen25 0.8513)
+  gate C_vs_compute  acc_true   vs compute-matched    NOT EVALUABLE  [1 saturation at generation 1]
+  condition verdict: PARTIAL (A, C_vs_step read; B, C_vs_compute refused)
+  DESCRIPTIVE, no gate: surviving alphabet gen1 10.00 -> gen25 10.00; one-step reference mean 10.00. No verdict attaches to this and none may be added later.
+
+b37_ratio_match  B = 37
+  sanity: chain gen 1 mean agreement 0.7773 in [0.6634, 0.8521] -> OK
+  gate A             agree_gen0 vs step-matched       PASSED  (escapes at gen 5; floor 0.6634, gen1 0.7773, gen25 0.3568)
+  gate B             agree_gen0 vs compute-matched    PASSED  (escapes at gen 2; floor 0.7644, gen1 0.7773, gen25 0.3568)
+  gate C_vs_step     acc_true   vs step-matched       PASSED  (escapes at gen 5; floor 0.6617, gen1 0.7747, gen25 0.3589)
+  gate C_vs_compute  acc_true   vs compute-matched    PASSED  (escapes at gen 2; floor 0.7604, gen1 0.7747, gen25 0.3589)
+  condition verdict: PASSED
+  DESCRIPTIVE, no gate: surviving alphabet gen1 9.80 -> gen25 6.25; one-step reference mean 9.85. No verdict attaches to this and none may be added later.
+
+=== combination across bottleneck conditions ===
+  b128_absolute_match    PARTIAL (A, C_vs_step read; B, C_vs_compute refused)
+  b37_ratio_match        PASSED
+  SPLIT BY CORRESPONDENCE. The two readings of the synthetic bottleneck give
+  different verdicts. Both are stated side by side with their bottlenecks
+  named, never averaged, never resolved, and never reported with one omitted.
+
+wall 10874.4s; wrote logs/c10_digits_iteration.json and logs/c10_digits_iteration.txt
