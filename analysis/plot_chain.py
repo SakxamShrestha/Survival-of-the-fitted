@@ -713,6 +713,129 @@ def fig_digits_real_data():
     legend.get_frame().set_linewidth(0)
     save(fig, "fig13_digits_real_data.png")
 
+
+# ------------------------------------------------------------------ C-4S, C-4F
+#
+# Neither control trains a network. Both read death generations and the
+# generation-1 transmitted mass unmodified from logs/c4_timing.json and rebuild
+# only the founder, so these two figures carry no quantity that is not already
+# in a committed log. The rho values annotated on them are the gate statistics
+# as logged, not recomputed here.
+
+def fig_c4s_predictors():
+    """C-4S: the founder's own class frequency outpredicts transmitted signal.
+
+    Death generation is censored at 26 for a class still alive at generation 25,
+    which is the rule's own convention: a class that never dies must not leave
+    the sample. Censored points are drawn hollow so the reader can see how much
+    of each panel is censored rather than having to take the correlation on
+    trust.
+    """
+    with open(os.path.join(LOGS, "c4_timing.json")) as handle:
+        timing = json.load(handle)
+    with open(os.path.join(LOGS, "c4_frequency_null.json")) as handle:
+        freq_log = json.load(handle)
+    with open(os.path.join(LOGS, "c4_survival_regression.json")) as handle:
+        reg = json.load(handle)
+
+    founder_freq = freq_log["founder_class_frequency"]
+    rho_freq = reg["gate_a_frequency"]["observed"]
+    rho_signal = timing["gate_a_observed_rho"]
+
+    # The founder is one model, so its per-class frequency is identical across
+    # the five chains and is repeated when pooling; only death generations and
+    # transmitted mass differ per chain. The note in c4_survival_regression.json
+    # records this, and it is why the left panel shows five stacked columns.
+    freq_x, signal_x, deaths = [], [], []
+    for chain in timing["chains"]:
+        for cls, death in enumerate(chain["death_gen"]):
+            freq_x.append(founder_freq[cls])
+            signal_x.append(chain["mass_g1"][cls])
+            deaths.append(death)
+
+    fig, axes = plt.subplots(1, 2, figsize=(10.4, 4.3))
+    panels = [
+        (axes[0], freq_x, "founder's predicted frequency on the probe pool",
+         "founder frequency alone\n" + r"$\rho$ = " + f"{rho_freq:.4f}"),
+        (axes[1], signal_x, "effective examples transmitted at generation 1",
+         "transmitted signal\n" + r"$\rho$ = " + f"{rho_signal:.4f}"),
+    ]
+    for ax, xs, xlabel, note in panels:
+        alive = [i for i, d in enumerate(deaths) if d >= 26]
+        dead = [i for i, d in enumerate(deaths) if d < 26]
+        ax.scatter([xs[i] for i in dead], [deaths[i] for i in dead],
+                   s=22, color=CAT[0], alpha=0.55, linewidth=0, zorder=3)
+        ax.scatter([xs[i] for i in alive], [deaths[i] for i in alive],
+                   s=26, facecolor="none", edgecolor=CAT[1], linewidth=1.0,
+                   alpha=0.85, zorder=4)
+        ax.axhline(26, color=MUTED, linewidth=0.8, linestyle=(0, (4, 3)), zorder=2)
+        # Headroom above the censoring row so the annotations never sit on data.
+        ax.set_ylim(0, 29.8)
+        style(ax, xlabel, "generation the class permanently disappears", "")
+        ax.text(0.98, 0.04, note, transform=ax.transAxes, fontsize=10,
+                color=INK, va="bottom", ha="right")
+
+    axes[0].text(0.02, 0.97, "hollow = still alive at generation 25 (censored at 26)",
+                 transform=axes[0].transAxes, fontsize=8.5, color=MUTED,
+                 va="top", ha="left")
+    fig.suptitle("C-4S: the boring explanation is the stronger one",
+                 fontsize=11.5, color=INK, x=0.065, ha="left", y=1.02)
+    fig.tight_layout()
+    save(fig, "fig14_c4s_predictors.png")
+
+
+def fig_c4f_matched_null():
+    """C-4F: the effect survives frequency matching, and shrinks a long way.
+
+    Only each null's mean and standard deviation are logged, not its full
+    distribution, so the nulls are drawn as mean plus or minus one standard
+    deviation rather than as curves. Drawing a smooth density here would invent
+    a shape the log does not record.
+    """
+    with open(os.path.join(LOGS, "c4_frequency_null.json")) as handle:
+        log = json.load(handle)
+
+    tests = [
+        ("timing gap\n(starved minus the rest, generations)",
+         log["gate_a_matched"], log["c4t_gate_b_uniform_recomputed"]),
+        ("signal-vs-survival\ncorrelation",
+         log["gate_b_stratified"], log["c4t_gate_a_uniform_recomputed"]),
+    ]
+
+    fig, axes = plt.subplots(1, 2, figsize=(10.4, 3.9))
+    for ax, (label, matched, uniform) in zip(axes, tests):
+        observed = matched["observed"]
+        rows = [("uniform comparison", uniform, CAT[3]),
+                ("frequency-matched", matched, CAT[2])]
+        for y, (name, stats, colour) in enumerate(rows):
+            mean, sd = stats["null_mean"], stats["null_sd"]
+            ax.plot([mean - sd, mean + sd], [y, y], color=colour, linewidth=7,
+                    solid_capstyle="butt", alpha=0.65, zorder=3)
+            ax.plot([mean], [y], marker="|", markersize=16, color=colour,
+                    markeredgewidth=2, zorder=4)
+            ax.text(mean, y + 0.26, name, fontsize=9, color=INK,
+                    ha="center", va="bottom")
+        ax.axvline(observed, color=CAT[1], linewidth=2, zorder=5)
+        ax.text(observed, 1.62, f"observed\n{observed:.4f}", fontsize=9.5,
+                color=CAT[1], ha="center", va="bottom")
+        # Pad the axis so the observed label is never clipped by the panel edge.
+        edges = [observed] + [s["null_mean"] + k * s["null_sd"]
+                              for s in (matched, uniform) for k in (-1, 1)]
+        lo, hi = min(edges), max(edges)
+        pad = 0.22 * (hi - lo)
+        ax.set_xlim(lo - pad, hi + pad)
+        ax.set_ylim(-0.6, 2.25)
+        ax.set_yticks([])
+        style(ax, label, "", "")
+        ax.grid(False, axis="y")
+
+    fig.suptitle("C-4F: matching on frequency moves the comparison most of the "
+                 "way, but not all of it",
+                 fontsize=11.5, color=INK, x=0.065, ha="left", y=1.04)
+    fig.tight_layout()
+    save(fig, "fig15_c4f_matched_null.png")
+
+
 if __name__ == "__main__":
     fig_train_vs_probe()
     fig_cka_blindness()
@@ -727,3 +850,5 @@ if __name__ == "__main__":
     fig_s1_inertness()
     fig_structured_vs_noise()
     fig_digits_real_data()
+    fig_c4s_predictors()
+    fig_c4f_matched_null()
