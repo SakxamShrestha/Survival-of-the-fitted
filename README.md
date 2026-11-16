@@ -211,7 +211,7 @@ they were designed in, not the order they run in.
 | **C-5** | Chain seeds vary the student's initialization and the transmitted subsample together. Splitting them separates optimization noise from channel noise. | not run |
 | **C-6** | Every metric might be a training metric, because the chain trains on the same 4,096 inputs everything is measured on. | **failed** — two claims withdrawn, temperature and `argmax` |
 | **C-7** | Iterated ridge regression might reproduce the whole phenomenon with no neural network involved. | not run |
-| **C-8** | Freezing the body and training only the head makes the chain a linear readout problem; surviving contraction would then be a readout effect. | not run |
+| **C-8** | Freezing the body and training only the head makes the chain a linear readout problem; surviving contraction would then be a readout effect. | **not evaluable** — its own precondition refused it: 0 of 20 frozen founders fall inside C-1's founder range, so the two arms never started from comparable models |
 
 Two further controls were added after C-3 and C-4 forced them:
 
@@ -220,9 +220,23 @@ Two further controls were added after C-3 and C-4 forced them:
 | **C-2R** | C-3 moved the reference C-2's result is defined against. Give a single student the chain's entire compute budget — 25 × 1,500 = 37,500 steps — and ask whether the chain still leaves it. | **verdict unusable**, see below; the run itself produced the strongest form of the alphabet result |
 | **C-4T** | C-4 established that starvation happens but its gate could not say whether it matters. This asks whether starved classes die *sooner*. | **failed** — they die 5.51 generations earlier, p = 0.0001 |
 
+Three more were added later, two of them because C-8 and the synthetic pool's scope caveat
+forced them:
+
+| | what it targets | status |
+|---|---|---|
+| **C-8b** | C-8's precondition refused the comparison because the frozen and intact arms started from different founders. C-8b gives both arms the *same* founder and asks the same question again. | **deeper, to the floor** — the frozen arm reaches 1.471 [1.235, 1.706] against the intact network's 7.706 [5.706, 9.588] on the same 17 seeds |
+| **C-9** | Every result here rests on a founder that can only memorise its table. This asks whether any of it is visible outside synthetic data at all. | **descriptive, ungated** — no rule was committed for it, so it can show a behaviour and never return a verdict |
+| **C-10** | C-9 could describe but not judge. C-10 is the gated version: the rule was committed before the runner wrote a single line of log. | **split by correspondence** — see below |
+
 Six controls have run. Five did damage. That ratio is the argument for writing the rule down
 first — and two of the five failures are failures of my own gate design rather than of the
 result being tested, which is recorded below rather than quietly fixed.
+
+Fourteen controls now carry a pass/fail rule in `gates/thresholds.json`, every one of them
+committed before the run it judges. C-9 is the exception that proves the point: it has no
+rule, so it is reported as description and can never become a verdict, however suggestive its
+numbers look.
 
 **C-6 — measure on inputs the model never trained on.** Every metric had been computed on the
 same 4,096 inputs the chain trains on. The rule, fixed in advance, was that a gap of more than
@@ -282,6 +296,47 @@ budget-matched reference.
 
 Three of these four controls damaged a claim, one strengthened it, and all four took minutes
 of compute. That is the argument for writing the rule down first.
+
+#### C-9 and C-10 — does any of this happen on real data?
+
+Everything above runs on a constructed pool of 4,096 points whose generation-0 labels are
+drawn at random. That design is what makes several of the permutation comparisons well posed,
+and it is also the project's largest scope caveat: a founder that can only memorise a table
+may not behave like a founder that has learned a rule.
+
+C-9 ran the same chain on scikit-learn's bundled `load_digits` — 1,797 images of eight pixels
+by eight, ten classes, split into 1,198 training and 599 held-out. Only the data changed. It
+was deliberately left ungated, because a decision rule written after the numbers are in hand
+is not a decision rule, and it returned a result I had not anticipated: the answer depends on
+how the bottleneck is carried over. The synthetic headline condition transmits 128 of 4,096
+points, which is 3.1% per generation. On a 1,198-point pool, 128 points is 10.7%. Matching
+the count and matching the fraction are therefore two different experiments.
+
+C-10 is the gated version, and it preregistered that disagreement rather than discovering it:
+both correspondences were named in the rule, neither privileged, and the rule was committed
+before the runner wrote a line of log. Twenty chains per condition, twenty-five generations,
+measured on the held-out pool.
+
+| | transmitted per generation | true accuracy, gen 1 → gen 25 | classes still used, of ten | verdict |
+|---|---|---|---|---|
+| matched fraction | 37, which is 3.1% of this pool | **0.7747 → 0.3589** | 9.80 → 6.25 | **passed** — all four gates read, all four passed |
+| matched count | 128, the synthetic condition's own B | 0.9000 → 0.8513 | 10.00 → 10.00 | **partial** — two gates passed, two were refused |
+
+![C-10 gated real-data arm](figs/fig16_c10_gated_real_data.png)
+
+Under the matched fraction the chain loses the task outright, crossing below the preregistered
+floor at generation five and never returning. Under the matched count it decays far less, and
+two of its four gates could not be read at all: the chain already sits below the
+compute-matched floor at generation one, and the rule refuses an escape that is present before
+the chain has run. That refusal cannot be repaired by running it again, because generation one
+*is* a one-step student by construction.
+
+**Both readings stand.** They are reported side by side with their bottlenecks named, never
+averaged and never resolved into one. Saying "the result reproduces on real data" deletes the
+count reading; saying "it was inconclusive" deletes the fraction reading. What C-10 establishes
+is narrower and more useful than either: on natural data the contraction is real under one
+defensible correspondence and absent under the other, and which one you pick is a modelling
+decision that has to be made in the open.
 
 #### C-1 in detail
 
