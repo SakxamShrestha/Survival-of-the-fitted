@@ -836,6 +836,168 @@ def fig_c4f_matched_null():
     save(fig, "fig15_c4f_matched_null.png")
 
 
+def fig_c10_gated_real_data():
+    """C-10: the gated real-data arm, whose verdict splits by correspondence.
+
+    Twenty chains per condition on sklearn's digits, HELD-OUT PROBE POOL, read
+    from logs/c10_digits_iteration.json. This is the gated arm and is a
+    different experiment from C-9 in fig13, which was descriptive and ran five
+    chains; nothing here is a restatement of that figure.
+
+    The synthetic headline condition sends 128 of 4096 points per generation.
+    On this 1198-point training pool, matching that COUNT (B = 128, 10.7% of
+    the pool) and matching that FRACTION (B = 37, 3.1%) are two different
+    experiments, both preregistered, neither privileged. They return different
+    verdicts and the figure keeps both: B = 37 passed all four gates, while
+    B = 128 is PARTIAL, because its chain mean at generation 1 already sits
+    below the compute-matched floor, which the committed rule refuses to read
+    as evidence about the chain. Shaded bands are the full min-to-max spread
+    across the twenty chains, not a confidence interval.
+
+    Floors drawn and floors dropped. The left panel plots acc_true, which is
+    what gate C reads, so it carries gate C's two floors for each condition:
+    the step-matched 2.5th percentile (dashed) and the compute-matched 2.5th
+    percentile (dotted) of twenty one-step students. The agreement floors
+    behind gates A and B are not drawn, because this panel does not plot
+    agreement. The right panel carries no floor at all: the log records a
+    step-matched class reference, but the surviving alphabet was committed as
+    DESCRIPTIVE with no gate attached, and it is degenerate for B = 128, so
+    drawing it as a line would invent a test that was never preregistered.
+    """
+    with open(os.path.join(LOGS, "c10_digits_iteration.json")) as handle:
+        d = json.load(handle)
+
+    # Digits has ten classes. The module-level N_CLASSES is the synthetic
+    # pool's fifty and does not apply to this arm.
+    n_cls = d["pools"]["n_classes"]
+    res = {r["condition"]: r for r in d["results"]}
+    order = ["b128_absolute_match", "b37_ratio_match"]
+    label = {
+        "b128_absolute_match": "B = 128, matched count (10.7% of pool)",
+        "b37_ratio_match": "B = 37, matched fraction (3.1% of pool)",
+    }
+    colour = {"b128_absolute_match": CAT[0], "b37_ratio_match": CAT[1]}
+    gens = list(range(1, d["gens"] + 1))
+
+    def band(cond, key):
+        """Mean and min-to-max spread over the chains, on the probe pool."""
+        series = [[g["probe"][key] for g in chain] for chain in cond["chains"]]
+        n = len(series)
+        mean = [sum(s[i] for s in series) / n for i in range(len(gens))]
+        return (mean,
+                [min(s[i] for s in series) for i in range(len(gens))],
+                [max(s[i] for s in series) for i in range(len(gens))])
+
+    fig, (a, b) = plt.subplots(1, 2, figsize=(11.6, 4.8))
+
+    # ---- Left: true accuracy against the two preregistered floors.
+    for cond_name in order:
+        cond = res[cond_name]
+        col_ = colour[cond_name]
+        mean, lo, hi = band(cond, "acc_true")
+        a.fill_between(gens, lo, hi, color=col_, alpha=0.15, linewidth=0)
+        a.plot(gens, mean, color=col_, linewidth=2.1, label=label[cond_name],
+               zorder=4)
+        floors = [("step_acc", (0, (5, 3))), ("compute_acc", (0, (1, 2)))]
+        for key, dash in floors:
+            level = cond["reference_spreads"][key]["p2_5"]
+            a.axhline(level, color=col_, linewidth=1.1, linestyle=dash,
+                      alpha=0.9, zorder=2)
+            a.annotate(f"{level:.3f}", (gens[-1], level), fontsize=8,
+                       color=col_, ha="right",
+                       va="bottom" if key == "compute_acc" else "top",
+                       xytext=(0, 2 if key == "compute_acc" else -2),
+                       textcoords="offset points")
+        # The escape generation is where the committed reading was taken.
+        gate = cond["gates"]["C_vs_step"]
+        g_esc = gate["escape_gen"]
+        a.plot([g_esc], [gate["trajectory"][g_esc - 1]], marker="o",
+               markersize=5.5, color=col_, zorder=6)
+        a.annotate(f"first falls below at gen {g_esc}",
+                   (g_esc, gate["trajectory"][g_esc - 1]), fontsize=8.5,
+                   color=col_, ha="left", va="top", xytext=(7, -5),
+                   textcoords="offset points")
+
+    # The refusal is the point of the split verdict, so it is marked on the
+    # panel and not left to the header alone.
+    refused = res["b128_absolute_match"]["gates"]["C_vs_compute"]
+    a.annotate("B = 128 starts below its compute-matched floor,\n"
+               "so those two gates were refused, not read",
+               (1.1, refused["floor_value"]), fontsize=8.5,
+               color=colour["b128_absolute_match"], ha="left", va="top",
+               xytext=(4.2, 1.005), textcoords="data",
+               arrowprops=dict(arrowstyle="->", lw=1.0,
+                               color=colour["b128_absolute_match"],
+                               shrinkB=2))
+
+    # Proxy handles so one legend explains both the conditions and the floors.
+    floor_keys = [
+        plt.Line2D([], [], color=MUTED, linewidth=1.1, linestyle=(0, (5, 3)),
+                   label="step-matched floor (2.5th pct of 20 one-step students)"),
+        plt.Line2D([], [], color=MUTED, linewidth=1.1, linestyle=(0, (1, 2)),
+                   label="compute-matched floor (same, 25x the training steps)"),
+    ]
+    a.set_xlim(1, gens[-1])
+    a.set_ylim(0.14, 1.02)
+    style(a, "generation", "true accuracy (held-out probe pool)",
+          "Both conditions fall below their step-matched floor")
+    handles = a.get_legend_handles_labels()[0] + floor_keys
+    legend = a.legend(handles=handles, fontsize=8.5, labelcolor=INK,
+                      loc="lower left", frameon=True, facecolor="white",
+                      edgecolor="none", framealpha=0.92)
+    legend.get_frame().set_linewidth(0)
+
+    # ---- Right: the surviving alphabet, descriptive and ungated.
+    for cond_name in order:
+        cond = res[cond_name]
+        col_ = colour[cond_name]
+        mean, lo, hi = band(cond, "n_classes_used")
+        flat = max(hi) - min(lo) == 0
+        b.fill_between(gens, lo, hi, color=col_, alpha=0.15, linewidth=0)
+        # B = 128 keeps all ten classes in every chain, so its trace would sit
+        # on the frame; it is dashed and drawn last rather than hidden there.
+        b.plot(gens, mean, color=col_, linewidth=2.6 if flat else 2.1,
+               linestyle=(0, (5, 3)) if flat else "-",
+               zorder=6 if flat else 4)
+
+    b.set_xlim(1, gens[-1])
+    b.set_ylim(0, n_cls + 0.9)
+    b.set_yticks(range(0, n_cls + 1, 2))
+    style(b, "generation", f"classes still used, of {n_cls} "
+          "(held-out probe pool)",
+          "The alphabet only shrinks under the matched fraction")
+    b.annotate(f"B = 128: all {n_cls} classes, in every chain", (13, n_cls),
+               fontsize=9, color=colour["b128_absolute_match"], ha="center",
+               va="bottom", xytext=(0, 5), textcoords="offset points")
+    b.text(2.2, 3.4, "B = 37, mean of 20 chains;\nshaded band is their full\n"
+           "min-to-max range", fontsize=9,
+           color=colour["b37_ratio_match"], ha="left", va="center")
+    b.text(0.985, 0.06,
+           "DESCRIPTIVE, no gate was committed for the alphabet.\n"
+           "No verdict attaches to this panel.",
+           transform=b.transAxes, fontsize=8.5, color=MUTED, ha="right",
+           va="bottom")
+
+    # ---- The split verdict, stated above the panels so it cannot be skipped.
+    fig.suptitle("C-10: the gated real-data arm. Which bottleneck you match "
+                 "decides the verdict, and both readings stand.",
+                 fontsize=11.5, color=INK, x=0.065, ha="left", y=1.21)
+    fig.text(0.065, 1.15,
+             f"B = 128, matched count — {res['b128_absolute_match']['verdict']}.\n"
+             "The two refused gates compare the chain to a reference trained for "
+             "25x as many steps. The chain sits below that floor already at\n"
+             "generation 1, and the preregistered rule refuses an escape that is "
+             "present before the chain runs; it is not read as a result either way.",
+             fontsize=9, color=colour["b128_absolute_match"], ha="left",
+             va="top", linespacing=1.5)
+    fig.text(0.065, 1.02,
+             f"B = 37, matched fraction — {res['b37_ratio_match']['verdict']}: "
+             "all four gates were read and all four passed.",
+             fontsize=9, color=colour["b37_ratio_match"], ha="left", va="top")
+    fig.tight_layout()
+    save(fig, "fig16_c10_gated_real_data.png")
+
+
 if __name__ == "__main__":
     fig_train_vs_probe()
     fig_cka_blindness()
@@ -852,3 +1014,4 @@ if __name__ == "__main__":
     fig_digits_real_data()
     fig_c4s_predictors()
     fig_c4f_matched_null()
+    fig_c10_gated_real_data()
